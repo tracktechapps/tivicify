@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
+import { audioEnhancer } from '../services/audioEnhancer';
 
 interface TVNavigationOptions {
   enabled: boolean;
   onBack?: () => void;
   onEnter?: () => void;
+  soundEffects?: boolean;
 }
 
-export function useTVNavigation({ enabled, onBack }: TVNavigationOptions = { enabled: true }) {
+export function useTVNavigation({ enabled, onBack, soundEffects = false }: TVNavigationOptions = { enabled: true }) {
   useEffect(() => {
     if (!enabled) return;
 
@@ -17,6 +19,7 @@ export function useTVNavigation({ enabled, onBack }: TVNavigationOptions = { ena
       if (e.key === 'Escape' || e.key === 'BrowserBack' || e.key === 'GoBack') {
         if (onBack) {
           e.preventDefault();
+          if (soundEffects) audioEnhancer.playNavigationTick();
           onBack();
           return;
         }
@@ -54,9 +57,9 @@ export function useTVNavigation({ enabled, onBack }: TVNavigationOptions = { ena
         e.preventDefault();
 
         if (!activeElement || !focusables.includes(activeElement)) {
-          // If no focusable is focused, focus the first one
           focusables[0].focus();
           focusables[0].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+          if (soundEffects) audioEnhancer.playNavigationTick();
           return;
         }
 
@@ -98,11 +101,12 @@ export function useTVNavigation({ enabled, onBack }: TVNavigationOptions = { ena
             block: 'center',
             inline: 'center',
           });
+          if (soundEffects) audioEnhancer.playNavigationTick();
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enabled, onBack]);
+  }, [enabled, onBack, soundEffects]);
 }

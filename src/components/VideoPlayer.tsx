@@ -17,18 +17,37 @@ import {
   AlertCircle,
   Captions,
   Sliders,
-  Check
+  Check,
+  Minimize2,
+  Moon,
+  List,
+  Activity,
+  Zap,
+  Ear
 } from 'lucide-react';
-import { MediaItem } from '../types';
+import { MediaItem, ChannelItem, StreamStats } from '../types';
 import { storageService } from '../services/storageService';
+import { audioEnhancer } from '../services/audioEnhancer';
+import { SleepTimerModal } from './SleepTimerModal';
+import { ChannelSurferDrawer } from './ChannelSurferDrawer';
 
 interface VideoPlayerProps {
   media: MediaItem;
   onClose: () => void;
   onPlayNext?: () => void;
+  onMinimize?: () => void;
+  liveChannels?: ChannelItem[];
+  onSwitchChannel?: (item: MediaItem) => void;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlayNext }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({
+  media,
+  onClose,
+  onPlayNext,
+  onMinimize,
+  liveChannels = [],
+  onSwitchChannel,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -45,14 +64,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
   const [playbackRate, setPlaybackRate] = useState(1);
   const [aspectRatio, setAspectRatio] = useState<'contain' | 'cover' | 'fill'>('contain');
 
-  // Menus
+  // Menus & Modals
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
+  const [showSleepTimer, setShowSleepTimer] = useState(false);
+  const [showChannelSurfer, setShowChannelSurfer] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+
+  // Audio Enhancements
+  const [audioBoost, setAudioBoost] = useState<number>(1); // 1 = 100%, 1.5 = 150%, 2 = 200%
+  const [nightModeAudio, setNightModeAudio] = useState<boolean>(false);
+
+  // Sleep Timer countdown
+  const [sleepTimerMinutes, setSleepTimerMinutes] = useState<number | null>(null);
+  const [sleepTimerRemaining, setSleepTimerRemaining] = useState<number | null>(null);
 
   // Subtitles & Quality
   const [selectedSubtitle, setSelectedSubtitle] = useState<string>('off');
   const [availableQualities, setAvailableQualities] = useState<{ id: number; label: string }[]>([]);
   const [currentQuality, setCurrentQuality] = useState<number>(-1); // -1 is auto
+
+  // Stream Stats
+  const [streamStats, setStreamStats] = useState<StreamStats>({
+    resolution: '1920x1080',
+    bitrateKbps: 0,
+    bufferedSeconds: 0,
+    droppedFrames: 0,
+    latencyMs: 12,
+    hlsVersion: Hls.version,
+  });
 
   const controlsTimeoutRef = useRef<number | null>(null);
   const isLive = media.type === 'live' || media.streamUrl.includes('live') || duration === Infinity;
@@ -64,13 +104,39 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
       window.clearTimeout(controlsTimeoutRef.current);
     }
     controlsTimeoutRef.current = window.setTimeout(() => {
-      if (isPlaying) {
+      if (isPlaying && !showChannelSurfer && !showSleepTimer) {
         setShowControls(false);
         setShowSettingsMenu(false);
         setShowSubtitleMenu(false);
       }
     }, 3500);
-  }, [isPlaying]);
+  }, [isPlaying, showChannelSurfer, showSleepTimer]);
+
+  // Sleep Timer countdown interval
+  useEffect(() => {
+    if (!sleepTimerMinutes) {
+      setSleepTimerRemaining(null);
+      return;
+    }
+
+    setSleepTimerRemaining(sleepTimerMinutes * 60);
+
+    const interval = setInterval(() => {
+      setSleepTimerRemaining((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          if (videoRef.current) {
+            videoRef.current.pause();
+            setIsPlaying(false);
+          }
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sleepTimerMinutes]);
 
   // Handle HLS and Native video loading
   useEffect(() => {
@@ -81,6 +147,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
     setError(null);
     setAvailableQualities([]);
     setCurrentQuality(-1);
+
+    // Attach Web Audio enhancer
+    try {
+      audioEnhancer.attachToVideo(video);
+      audioEnhancer.setGain(audioBoost);
+      audioEnhancer.setNightMode(nightModeAudio);
+    } catch {
+      // Ignore if browser restricts auto audio context
+    }
 
     const isHlsStream = media.streamUrl.endsWith('.m3u8') || media.streamType === 'hls';
 
@@ -101,7 +176,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         setIsLoading(false);
 
-        // Quality levels
         if (data.levels && data.levels.length > 1) {
           const qualities = [
             { id: -1, label: 'Auto' },
@@ -113,7 +187,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
           setAvailableQualities(qualities);
         }
 
-        // Resume from saved progress if not a live stream
         if (!isLive) {
           const savedTime = storageService.getProgress(media.id);
           if (savedTime > 5) {
@@ -121,6 +194,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
           }
         }
         video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      });
+
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+        const lvl = hls.levels[data.level];
+        if (lvl) {
+          setStreamStats((prev) => ({
+            ...prev,
+            resolution: `${lvl.width || 1920}x${lvl.height || 1080}`,
+            bitrateKbps: Math.round(lvl.bitrate / 1000),
+          }));
+        }
       });
 
       hls.on(Hls.Events.ERROR, (_, data) => {
@@ -143,7 +227,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
 
       hlsRef.current = hls;
     } else {
-      // Native MP4 / WebM / Safari native HLS
       video.src = media.streamUrl;
       video.load();
 
@@ -155,6 +238,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
             video.currentTime = savedTime;
           }
         }
+        setStreamStats((prev) => ({
+          ...prev,
+          resolution: `${video.videoWidth || 1920}x${video.videoHeight || 1080}`,
+        }));
         video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
       };
 
@@ -178,7 +265,26 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
         hlsRef.current = null;
       }
     };
-  }, [media, isLive]);
+  }, [media, isLive, audioBoost, nightModeAudio]);
+
+  // Update buffer stats periodically
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const interval = setInterval(() => {
+      if (video.buffered.length > 0) {
+        const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+        const bufferedSeconds = Math.max(0, Math.round(bufferedEnd - video.currentTime));
+        setStreamStats((prev) => ({
+          ...prev,
+          bufferedSeconds,
+        }));
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Subtitle track selection handler
   const handleSelectSubtitle = (lang: string) => {
@@ -210,6 +316,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
     if (hlsRef.current) {
       hlsRef.current.currentLevel = levelId;
     }
+  };
+
+  // Audio boost handler
+  const handleAudioBoostChange = (multiplier: number) => {
+    setAudioBoost(multiplier);
+    audioEnhancer.setGain(multiplier);
+    resetControlsTimeout();
+  };
+
+  // Night mode toggle
+  const toggleNightModeAudio = () => {
+    const next = !nightModeAudio;
+    setNightModeAudio(next);
+    audioEnhancer.setNightMode(next);
+    resetControlsTimeout();
   };
 
   // Progress saver
@@ -359,18 +480,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
           e.preventDefault();
           toggleMute();
           break;
+        case 'c':
+        case 'C':
+          if (isLive) {
+            setShowChannelSurfer((prev) => !prev);
+          }
+          break;
         case 'Escape':
         case 'BrowserBack':
         case 'GoBack':
           e.preventDefault();
-          onClose();
+          if (showChannelSurfer) {
+            setShowChannelSurfer(false);
+          } else {
+            onClose();
+          }
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, volume, isMuted, onClose, resetControlsTimeout]);
+  }, [isPlaying, volume, isMuted, onClose, resetControlsTimeout, isLive, showChannelSurfer]);
 
   const formatTime = (timeInSeconds: number) => {
     if (isNaN(timeInSeconds) || timeInSeconds === Infinity) return '00:00';
@@ -408,7 +539,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
         }`}
         onClick={togglePlay}
       >
-        {/* Subtitle WebVTT Tracks */}
         {media.subtitles?.map((sub) => (
           <track
             key={sub.lang}
@@ -459,6 +589,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
         </div>
       )}
 
+      {/* Quick Channel Surfer Drawer */}
+      {isLive && (
+        <ChannelSurferDrawer
+          isOpen={showChannelSurfer}
+          onClose={() => setShowChannelSurfer(false)}
+          channels={liveChannels}
+          activeChannelUrl={media.streamUrl}
+          onSwitchChannel={(item) => {
+            setShowChannelSurfer(false);
+            if (onSwitchChannel) onSwitchChannel(item);
+          }}
+        />
+      )}
+
+      {/* Stats for Nerds Overlay */}
+      {showStats && (
+        <div className="absolute top-20 left-6 z-40 p-4 rounded-2xl glass-panel border border-slate-700/80 text-xs font-mono text-gray-200 shadow-2xl space-y-1.5 pointer-events-auto">
+          <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-700">
+            <span className="font-bold text-sky-400">Stream Diagnostics</span>
+            <button onClick={() => setShowStats(false)} className="text-gray-400 hover:text-white">✕</button>
+          </div>
+          <div>Resolution: <span className="text-emerald-400">{streamStats.resolution}</span></div>
+          <div>Buffer Length: <span className="text-amber-400">{streamStats.bufferedSeconds}s</span></div>
+          <div>Bitrate: <span className="text-sky-300">{streamStats.bitrateKbps ? `${streamStats.bitrateKbps} kbps` : 'Adaptive'}</span></div>
+          <div>Audio Boost: <span className="text-indigo-400">{audioBoost * 100}%</span></div>
+          <div>Night Mode EQ: <span className={nightModeAudio ? 'text-emerald-400' : 'text-gray-400'}>{nightModeAudio ? 'Enabled' : 'Disabled'}</span></div>
+        </div>
+      )}
+
       {/* Controls Overlay */}
       <div
         className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 pointer-events-none ${
@@ -496,22 +655,60 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Live TV Channels Drawer Button */}
+            {isLive && liveChannels.length > 0 && (
+              <button
+                onClick={() => setShowChannelSurfer(!showChannelSurfer)}
+                className={`tv-focusable flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md transition-colors ${
+                  showChannelSurfer ? 'bg-red-600 text-white' : 'bg-black/40 hover:bg-white/20 text-white'
+                }`}
+                title="Quick Channel Surfer (C)"
+              >
+                <List className="w-4 h-4" />
+                <span className="hidden sm:inline">Channels</span>
+              </button>
+            )}
+
+            {/* Sleep Timer Button */}
+            <button
+              onClick={() => setShowSleepTimer(true)}
+              className={`tv-focusable p-2 rounded-lg backdrop-blur-md transition-colors ${
+                sleepTimerMinutes ? 'bg-indigo-600 text-white' : 'bg-black/40 hover:bg-white/20 text-white'
+              }`}
+              title="Bedtime Sleep Timer"
+            >
+              <Moon className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
+            {/* Minimize to Mini-Player */}
+            {onMinimize && (
+              <button
+                onClick={onMinimize}
+                className="tv-focusable p-2 rounded-lg bg-black/40 hover:bg-white/20 text-white backdrop-blur-md"
+                title="Minimize to Floating Player"
+              >
+                <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            )}
+
+            {/* Aspect Ratio */}
             <button
               onClick={() => setAspectRatio((prev) => (prev === 'contain' ? 'cover' : prev === 'cover' ? 'fill' : 'contain'))}
               className="tv-focusable hidden sm:flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-black/40 hover:bg-white/20 text-white text-xs font-semibold backdrop-blur-md"
-              title="Toggle Aspect Ratio"
+              title="Aspect Ratio"
             >
               <Tv className="w-4 h-4" />
               <span className="capitalize">{aspectRatio}</span>
             </button>
 
+            {/* Picture-in-Picture */}
             {document.pictureInPictureEnabled && (
               <button
                 onClick={togglePiP}
                 className="tv-focusable p-2 rounded-lg bg-black/40 hover:bg-white/20 text-white backdrop-blur-md"
                 title="Picture-in-Picture"
               >
-                <PictureInPicture2 className="w-5 h-5" />
+                <PictureInPicture2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             )}
           </div>
@@ -578,7 +775,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
                 </>
               )}
 
-              {/* Volume Slider */}
+              {/* Volume Slider & Night Mode Indicator */}
               <div className="flex items-center space-x-2 group">
                 <button
                   onClick={toggleMute}
@@ -601,9 +798,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
                   className="w-16 sm:w-24 h-1 bg-gray-600/60 rounded appearance-none accent-blue-500 cursor-pointer hidden sm:block"
                 />
               </div>
+
+              {/* Audio Boost Pill */}
+              {audioBoost > 1 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white">
+                  +{Math.round((audioBoost - 1) * 100)}% Boost
+                </span>
+              )}
             </div>
 
-            {/* Right Controls: Subtitles, Speed/Quality, Fullscreen */}
+            {/* Right Controls: Subtitles, Settings, Fullscreen */}
             <div className="relative flex items-center space-x-2 sm:space-x-3">
               
               {/* Subtitles Button */}
@@ -660,7 +864,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
                 </div>
               )}
 
-              {/* Settings / Speed / Quality Menu */}
+              {/* Settings / Speed / Audio Boost Menu */}
               <div className="relative">
                 <button
                   onClick={() => {
@@ -668,7 +872,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
                     setShowSubtitleMenu(false);
                   }}
                   className="tv-focusable flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-gray-200"
-                  title="Playback Settings & Quality"
+                  title="Audio Boost, Speed & Quality"
                 >
                   <Sliders className="w-3.5 h-3.5 mr-0.5" />
                   <span>{playbackRate}x</span>
@@ -676,33 +880,74 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
 
                 {/* Settings Menu Popup */}
                 {showSettingsMenu && (
-                  <div className="absolute bottom-12 right-0 glass-panel rounded-xl p-2.5 w-48 shadow-2xl flex flex-col space-y-2 z-30">
+                  <div className="absolute bottom-12 right-0 glass-panel rounded-xl p-3 w-56 shadow-2xl flex flex-col space-y-3 z-30">
                     
-                    {/* Playback Speed */}
+                    {/* Audio Boost (Up to 200%) */}
                     <div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
-                        Playback Speed
+                      <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center space-x-1 mb-1">
+                        <Zap className="w-3 h-3" />
+                        <span>Volume Booster</span>
                       </span>
                       <div className="grid grid-cols-3 gap-1">
-                        {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                        {[1, 1.5, 2].map((boost) => (
                           <button
-                            key={rate}
-                            onClick={() => handlePlaybackRate(rate)}
+                            key={boost}
+                            onClick={() => handleAudioBoostChange(boost)}
                             className={`py-1 rounded text-xs text-center transition-colors ${
-                              playbackRate === rate
-                                ? 'bg-blue-600 text-white font-bold'
+                              audioBoost === boost
+                                ? 'bg-indigo-600 text-white font-bold'
                                 : 'text-gray-300 hover:bg-white/10'
                             }`}
                           >
-                            {rate}x
+                            {boost === 1 ? '100%' : `${boost * 100}%`}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    {/* HLS Video Quality Level */}
+                    {/* Night Mode Dialogue Clarity */}
+                    <div className="pt-2 border-t border-slate-700/60">
+                      <button
+                        onClick={toggleNightModeAudio}
+                        className={`w-full py-1.5 px-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                          nightModeAudio ? 'bg-indigo-600/40 border border-indigo-500 text-indigo-200' : 'text-gray-300 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="flex items-center space-x-1.5">
+                          <Ear className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Clear Speech EQ</span>
+                        </span>
+                        {nightModeAudio && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                      </button>
+                    </div>
+
+                    {/* Playback Speed */}
+                    {!isLive && (
+                      <div className="pt-2 border-t border-slate-700/60">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                          Playback Speed
+                        </span>
+                        <div className="grid grid-cols-3 gap-1">
+                          {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                            <button
+                              key={rate}
+                              onClick={() => handlePlaybackRate(rate)}
+                              className={`py-1 rounded text-xs text-center transition-colors ${
+                                playbackRate === rate
+                                  ? 'bg-blue-600 text-white font-bold'
+                                  : 'text-gray-300 hover:bg-white/10'
+                              }`}
+                            >
+                              {rate}x
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* HLS Video Quality */}
                     {availableQualities.length > 0 && (
-                      <div className="pt-1.5 border-t border-slate-700/60">
+                      <div className="pt-2 border-t border-slate-700/60">
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
                           Stream Quality
                         </span>
@@ -725,6 +970,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
                       </div>
                     )}
 
+                    {/* Stream Stats Toggle */}
+                    <div className="pt-2 border-t border-slate-700/60">
+                      <button
+                        onClick={() => {
+                          setShowStats(!showStats);
+                          setShowSettingsMenu(false);
+                        }}
+                        className="w-full py-1 text-left text-[11px] text-gray-400 hover:text-white flex items-center space-x-1.5"
+                      >
+                        <Activity className="w-3 h-3 text-sky-400" />
+                        <span>Stats for Nerds</span>
+                      </button>
+                    </div>
+
                   </div>
                 )}
               </div>
@@ -741,6 +1000,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ media, onClose, onPlay
           </div>
         </div>
       </div>
+
+      {/* Sleep Timer Preset Modal */}
+      <SleepTimerModal
+        isOpen={showSleepTimer}
+        onClose={() => setShowSleepTimer(false)}
+        activeMinutes={sleepTimerMinutes}
+        remainingSeconds={sleepTimerRemaining}
+        onSetTimer={(mins) => setSleepTimerMinutes(mins)}
+      />
     </div>
   );
 };

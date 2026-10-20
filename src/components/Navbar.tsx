@@ -9,7 +9,8 @@ import {
   Settings, 
   Gamepad2,
   FolderPlus,
-  HelpCircle
+  HelpCircle,
+  Baby
 } from 'lucide-react';
 import { NavTab } from '../types';
 
@@ -23,6 +24,8 @@ interface NavbarProps {
   onOpenShortcuts?: () => void;
   tvMode: boolean;
   onToggleTVMode: () => void;
+  kidsMode: boolean;
+  onToggleKidsMode: () => void;
   watchlistCount: number;
 }
 
@@ -36,6 +39,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenShortcuts,
   tvMode,
   onToggleTVMode,
+  kidsMode,
+  onToggleKidsMode,
   watchlistCount,
 }) => {
   return (
@@ -155,6 +160,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <FolderPlus className="w-4 h-4 text-indigo-400" />
               <span>Import M3U</span>
+            </button>
+
+            {/* Kids Mode Toggle */}
+            <button
+              onClick={onToggleKidsMode}
+              className={`tv-focusable flex items-center space-x-1 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                kidsMode
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'bg-slate-800/70 hover:bg-slate-700 text-gray-300 hover:text-white'
+              }`}
+              title={kidsMode ? 'Kids Safe Mode Active' : 'Switch to Kids Safe Mode'}
+            >
+              <Baby className="w-4 h-4 text-emerald-400" />
+              <span className="hidden xl:inline">{kidsMode ? 'Kids Mode ON' : 'Kids'}</span>
             </button>
 
             {/* TV Mode Toggle */}

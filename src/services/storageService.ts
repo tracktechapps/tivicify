@@ -14,6 +14,12 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoPlayNext: true,
   defaultQuality: 'auto',
   volume: 1,
+  kidsMode: false,
+  audioBoost: 1,
+  nightModeAudio: false,
+  ambientGlow: true,
+  themeColor: 'blue',
+  soundEffects: false,
 };
 
 export const storageService = {

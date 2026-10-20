@@ -32,11 +32,14 @@ import { SearchModal } from './components/SearchModal';
 import { SettingsModal } from './components/SettingsModal';
 import { TVRemoteSimulator } from './components/TVRemoteSimulator';
 import { ShortcutsGuideModal } from './components/ShortcutsGuideModal';
+import { MiniPlayer } from './components/MiniPlayer';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
   const [activeMedia, setActiveMedia] = useState<MediaItem | null>(null);
   const [detailMedia, setDetailMedia] = useState<MediaItem | null>(null);
+  const [isMiniPlayer, setIsMiniPlayer] = useState(false);
+  const [isPlayingMini, setIsPlayingMini] = useState(true);
 
   // Modals state
   const [searchOpen, setSearchOpen] = useState(false);
@@ -72,6 +75,7 @@ export function App() {
   // TV D-Pad Remote Navigation Hook
   useTVNavigation({
     enabled: settings.tvMode,
+    soundEffects: settings.soundEffects,
     onBack: () => {
       if (activeMedia) {
         setActiveMedia(null);
@@ -122,16 +126,27 @@ export function App() {
     return map;
   }, [progressList]);
 
-  // Featured hero item
-  const heroMedia = useMemo(() => {
-    return CURATED_MEDIA.find((m) => m.featured) || CURATED_MEDIA[0];
-  }, []);
+  // Filter media for Kids Safe Mode if active
+  const baseCatalog = useMemo(() => {
+    if (settings.kidsMode) {
+      return CURATED_MEDIA.filter(
+        (m) => m.type === 'animation' || m.genres.includes('Family') || m.type === 'documentary'
+      );
+    }
+    return CURATED_MEDIA;
+  }, [settings.kidsMode]);
+
+  // Featured hero spotlight items
+  const heroSpotlights = useMemo(() => {
+    const spots = baseCatalog.filter((m) => m.featured || (m.rating && parseFloat(m.rating) >= 8.5));
+    return spots.length > 0 ? spots.slice(0, 4) : baseCatalog.slice(0, 3);
+  }, [baseCatalog]);
 
   // Curated categories
-  const blenderMovies = useMemo(() => CURATED_MEDIA.filter((m) => m.director?.includes('Blender')), []);
-  const classicCinema = useMemo(() => CURATED_MEDIA.filter((m) => m.isPublicDomain && m.type === 'movie'), []);
-  const animations = useMemo(() => CURATED_MEDIA.filter((m) => m.type === 'animation'), []);
-  const documentaries = useMemo(() => CURATED_MEDIA.filter((m) => m.type === 'documentary'), []);
+  const blenderMovies = useMemo(() => baseCatalog.filter((m) => m.director?.includes('Blender')), [baseCatalog]);
+  const classicCinema = useMemo(() => baseCatalog.filter((m) => m.isPublicDomain && m.type === 'movie'), [baseCatalog]);
+  const animations = useMemo(() => baseCatalog.filter((m) => m.type === 'animation'), [baseCatalog]);
+  const documentaries = useMemo(() => baseCatalog.filter((m) => m.type === 'documentary'), [baseCatalog]);
 
   // Continue watching media items
   const continueWatchingItems = useMemo(() => {
@@ -181,8 +196,16 @@ export function App() {
     setProgressList([]);
   };
 
+  const themeGradients: Record<AppSettings['themeColor'], string> = {
+    blue: 'from-blue-950/25 via-[#080c14] to-[#080c14]',
+    red: 'from-red-950/25 via-[#080c14] to-[#080c14]',
+    purple: 'from-purple-950/25 via-[#080c14] to-[#080c14]',
+    amber: 'from-amber-950/25 via-[#080c14] to-[#080c14]',
+    emerald: 'from-emerald-950/25 via-[#080c14] to-[#080c14]',
+  };
+
   return (
-    <div className="min-h-screen bg-[#080c14] text-gray-100 flex flex-col selection:bg-blue-600 selection:text-white">
+    <div className={`min-h-screen bg-gradient-to-b ${themeGradients[settings.themeColor || 'blue']} text-gray-100 flex flex-col selection:bg-blue-600 selection:text-white transition-colors duration-500`}>
       {/* Top / Mobile Navbar */}
       <Navbar
         currentTab={currentTab}
@@ -194,6 +217,8 @@ export function App() {
         onOpenShortcuts={() => setShortcutsOpen(true)}
         tvMode={settings.tvMode}
         onToggleTVMode={() => handleUpdateSettings({ tvMode: !settings.tvMode })}
+        kidsMode={settings.kidsMode}
+        onToggleKidsMode={() => handleUpdateSettings({ kidsMode: !settings.kidsMode })}
         watchlistCount={watchlist.length}
       />
 
@@ -204,11 +229,14 @@ export function App() {
           <div>
             {/* Cinematic Hero */}
             <HeroBanner
-              media={heroMedia}
-              onPlay={setActiveMedia}
+              spotlights={heroSpotlights}
+              onPlay={(item) => {
+                setActiveMedia(item);
+                setIsMiniPlayer(false);
+              }}
               onOpenDetails={setDetailMedia}
               onToggleWatchlist={handleToggleWatchlist}
-              isInWatchlist={isInWatchlist(heroMedia.id)}
+              isInWatchlist={isInWatchlist}
             />
 
             {/* Continue Watching Section */}
@@ -320,7 +348,7 @@ export function App() {
 
             {/* Movies Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {CURATED_MEDIA.filter((item) => {
+              {baseCatalog.filter((item) => {
                 if (movieFilter === 'All') return true;
                 if (movieFilter === 'Public Domain') return item.isPublicDomain;
                 return item.genres.includes(movieFilter);
@@ -525,14 +553,32 @@ export function App() {
       <TVRemoteSimulator onBackToHome={() => setCurrentTab('home')} />
 
       {/* Video Player Modal */}
-      {activeMedia && (
+      {activeMedia && !isMiniPlayer && (
         <VideoPlayer
           media={activeMedia}
           onClose={() => {
             setActiveMedia(null);
+            setIsMiniPlayer(false);
             setProgressList(storageService.getProgressList());
           }}
           onPlayNext={handlePlayNext}
+          onMinimize={() => setIsMiniPlayer(true)}
+          liveChannels={CURATED_CHANNELS}
+          onSwitchChannel={(item) => setActiveMedia(item)}
+        />
+      )}
+
+      {/* In-App Floating Mini-Player */}
+      {activeMedia && isMiniPlayer && (
+        <MiniPlayer
+          media={activeMedia}
+          isPlaying={isPlayingMini}
+          onTogglePlay={() => setIsPlayingMini(!isPlayingMini)}
+          onExpand={() => setIsMiniPlayer(false)}
+          onClose={() => {
+            setActiveMedia(null);
+            setIsMiniPlayer(false);
+          }}
         />
       )}
 

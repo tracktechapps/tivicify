@@ -22,8 +22,8 @@ export interface MediaItem {
   streamUrl: string;
   streamType: 'hls' | 'mp4' | 'embed';
   year: number;
-  duration?: string; // e.g., "1h 36m" or "Live"
-  rating?: string; // e.g., "8.4" or "PG-13"
+  duration?: string;
+  rating?: string;
   isPublicDomain?: boolean;
   director?: string;
   cast?: string[];
@@ -62,4 +62,19 @@ export interface AppSettings {
   autoPlayNext: boolean;
   defaultQuality: 'auto' | '1080p' | '720p' | '480p';
   volume: number;
+  kidsMode: boolean;
+  audioBoost: number; // 1 = 100%, 1.5 = 150%, 2 = 200%
+  nightModeAudio: boolean;
+  ambientGlow: boolean;
+  themeColor: 'blue' | 'red' | 'purple' | 'amber' | 'emerald';
+  soundEffects: boolean;
+}
+
+export interface StreamStats {
+  resolution: string;
+  bitrateKbps: number;
+  bufferedSeconds: number;
+  droppedFrames: number;
+  latencyMs: number;
+  hlsVersion: string;
 }

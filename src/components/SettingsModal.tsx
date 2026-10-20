@@ -6,11 +6,13 @@ import {
   Gamepad2, 
   Smartphone, 
   Trash2, 
-  Check, 
   ExternalLink,
-  ShieldCheck,
   Download,
-  Info
+  Palette,
+  Baby,
+  Volume2,
+  Sparkles,
+  Ear
 } from 'lucide-react';
 import { AppSettings } from '../types';
 
@@ -52,6 +54,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const themes: { id: AppSettings['themeColor']; label: string; color: string }[] = [
+    { id: 'blue', label: 'Universal Blue', color: 'bg-blue-500' },
+    { id: 'red', label: 'Cinema Crimson', color: 'bg-red-500' },
+    { id: 'purple', label: 'Cyberpunk Violet', color: 'bg-purple-500' },
+    { id: 'amber', label: 'Vintage Gold', color: 'bg-amber-500' },
+    { id: 'emerald', label: 'Emerald Sci-Fi', color: 'bg-emerald-500' },
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
       <div className="relative w-full max-w-xl rounded-2xl bg-slate-900 border border-slate-700/80 shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -70,13 +80,63 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <SettingsIcon className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">App Settings & Controls</h2>
-            <p className="text-xs text-gray-400">Personalize TV navigation, metadata APIs, and APK export</p>
+            <h2 className="text-xl font-bold text-white">App Settings & Customization</h2>
+            <p className="text-xs text-gray-400">Personalize TV navigation, theme accents, audio & APK export</p>
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
           
+          {/* Theme Accent Color */}
+          <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <div className="flex items-center space-x-2 text-sky-400">
+              <Palette className="w-4 h-4" />
+              <h3 className="text-sm font-bold text-white">Interface Theme Accent</h3>
+            </div>
+            <p className="text-xs text-gray-400">Choose your favorite UI color scheme</p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {themes.map((th) => (
+                <button
+                  key={th.id}
+                  onClick={() => onUpdateSettings({ themeColor: th.id })}
+                  className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    settings.themeColor === th.id
+                      ? 'border-white bg-slate-700 text-white shadow-md'
+                      : 'border-slate-700 bg-slate-900/60 text-gray-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <span className={`w-3 h-3 rounded-full ${th.color}`} />
+                  <span>{th.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Kids Safe Mode Toggle */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/60 border border-slate-700">
+            <div className="flex items-center space-x-3">
+              <Baby className="w-6 h-6 text-emerald-400" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Kids & Family Safe Mode</h3>
+                <p className="text-xs text-gray-400">
+                  Filters catalog strictly to family animations, cartoons & space documentaries
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onUpdateSettings({ kidsMode: !settings.kidsMode })}
+              className={`tv-focusable relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                settings.kidsMode ? 'bg-emerald-600' : 'bg-slate-700'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  settings.kidsMode ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
           {/* TV Remote D-Pad Navigation Toggle */}
           <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/60 border border-slate-700">
             <div className="flex items-center space-x-3">
@@ -102,12 +162,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
+          {/* TV Remote Sound Effects */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/60 border border-slate-700">
+            <div className="flex items-center space-x-3">
+              <Volume2 className="w-6 h-6 text-indigo-400" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Interface Audio Ticks</h3>
+                <p className="text-xs text-gray-400">
+                  Tactile synthesized audio feedback on remote navigation & button clicks
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onUpdateSettings({ soundEffects: !settings.soundEffects })}
+              className={`tv-focusable relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                settings.soundEffects ? 'bg-indigo-600' : 'bg-slate-700'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  settings.soundEffects ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
           {/* Android APK Section */}
           <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
             <div className="flex items-center space-x-3">
               <Smartphone className="w-6 h-6 text-emerald-400" />
               <div>
-                <h3 className="text-sm font-bold text-white">Android Mobile & TV APK</h3>
+                <h3 className="text-sm font-bold text-white">Android Mobile & Smart TV APK</h3>
                 <p className="text-xs text-gray-400">
                   Cross-platform package built with Capacitor for Android phones, tablets & Smart TVs
                 </p>
@@ -125,7 +210,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Status:</span>
-                <span className="text-blue-400 font-semibold">Configured with Gradle & Bundled JDK</span>
+                <span className="text-blue-400 font-semibold">Compiled & Ready for Install</span>
               </div>
             </div>
 
@@ -136,7 +221,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="tv-focusable w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.02]"
               >
                 <Download className="w-4 h-4" />
-                <span>Download Tivicify.apk</span>
+                <span>Download Tivicify.apk (8.9 MB)</span>
               </a>
             )}
           </div>
