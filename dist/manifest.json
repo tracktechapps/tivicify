@@ -1,0 +1,20 @@
+{
+  "name": "Tivicify - Universal TV & Movie Streaming",
+  "short_name": "Tivicify",
+  "description": "Cross-platform TV, movie, and live stream application across mobile, TV, tablets, and laptops.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080c14",
+  "theme_color": "#080c14",
+  "categories": ["entertainment", "multimedia", "movies", "tv"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%23080c14'/><rect x='64' y='144' width='384' height='272' rx='32' fill='%231e293b' stroke='%233b82f6' stroke-width='24'/><polyline points='336 64 256 144 176 64' stroke='%233b82f6' stroke-width='24' stroke-linecap='round' stroke-linejoin='round' fill='none'/><polygon points='232,232 232,328 312,280' fill='%233b82f6'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

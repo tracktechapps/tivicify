@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tivicify</string>
+    <string name="title_activity_main">Tivicify</string>
+    <string name="package_name">com.tivicify.streaming</string>
+    <string name="custom_url_scheme">com.tivicify.streaming</string>
+</resources>
