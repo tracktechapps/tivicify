@@ -372,6 +372,15 @@ export function App() {
             customChannels={customChannels}
             onPlayChannel={setActiveMedia}
             onOpenImportM3U={() => setImportM3UOpen(true)}
+            onChannelsPopulated={(newChannels) => {
+              const combined = [...customChannels];
+              newChannels.forEach((nc) => {
+                if (!combined.some((c) => c.streamUrl === nc.streamUrl)) {
+                  combined.push(nc);
+                }
+              });
+              handleImportChannels(combined);
+            }}
           />
         )}
 

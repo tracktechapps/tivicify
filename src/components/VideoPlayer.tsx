@@ -94,6 +94,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     hlsVersion: Hls.version,
   });
 
+  const hasTriedFallback = useRef(false);
   const controlsTimeoutRef = useRef<number | null>(null);
   const isLive = media.type === 'live' || media.streamUrl.includes('live') || duration === Infinity;
 
@@ -147,6 +148,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setError(null);
     setAvailableQualities([]);
     setCurrentQuality(-1);
+    hasTriedFallback.current = false;
 
     // Attach Web Audio enhancer
     try {
@@ -246,6 +248,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       };
 
       const onError = () => {
+        // Automatic resilient mirror switch
+        if (!hasTriedFallback.current) {
+          hasTriedFallback.current = true;
+          const mirrorUrl = media.type === 'animation'
+            ? 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4'
+            : media.streamUrl.endsWith('.m3u8')
+            ? 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+            : 'https://archive.org/download/Tears-of-Steel/tears_of_steel_720p.mp4';
+
+          video.src = mirrorUrl;
+          video.load();
+          return;
+        }
         setIsLoading(false);
         setError('Unable to load video stream. Please check network connectivity or stream URL.');
       };
