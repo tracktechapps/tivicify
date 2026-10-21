@@ -13,7 +13,8 @@ import {
   Volume2,
   Sparkles,
   Ear,
-  Zap
+  Zap,
+  QrCode
 } from 'lucide-react';
 import { AppSettings } from '../types';
 
@@ -24,6 +25,7 @@ interface SettingsModalProps {
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
   onClearHistory: () => void;
   apkPath?: string;
+  onOpenInstallQr?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -33,6 +35,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateSettings,
   onClearHistory,
   apkPath,
+  onOpenInstallQr,
 }) => {
   const [apiKey, setApiKey] = useState(settings.tmdbApiKey || '');
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -240,16 +243,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
-            {apkPath && (
-              <a
-                href={apkPath}
-                download="Tivicify.apk"
-                className="tv-focusable w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.02]"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Tivicify.apk (8.9 MB)</span>
-              </a>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {apkPath && (
+                <a
+                  href={apkPath}
+                  download="Tivicify.apk"
+                  className="tv-focusable py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.02]"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download APK (21 MB)</span>
+                </a>
+              )}
+              {onOpenInstallQr && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenInstallQr();
+                  }}
+                  className="tv-focusable py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-cyan-600/20 transition-all hover:scale-[1.02]"
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span>Scan QR to Install</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* TMDB API Key */}

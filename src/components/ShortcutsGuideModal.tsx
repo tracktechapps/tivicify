@@ -88,6 +88,10 @@ export const ShortcutsGuideModal: React.FC<ShortcutsGuideModalProps> = ({ isOpen
                 <span className="text-blue-400 font-mono">Mute / Unmute</span>
               </div>
               <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800">
+                <span className="text-gray-300">Q Key</span>
+                <span className="text-cyan-400 font-mono">Scan QR / Install</span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800">
                 <span className="text-gray-300">Esc / Back</span>
                 <span className="text-blue-400 font-mono">Close Player</span>
               </div>

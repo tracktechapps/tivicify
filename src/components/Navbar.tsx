@@ -11,7 +11,8 @@ import {
   FolderPlus,
   HelpCircle,
   Baby,
-  HardDrive
+  HardDrive,
+  QrCode
 } from 'lucide-react';
 import { NavTab } from '../types';
 
@@ -23,6 +24,7 @@ interface NavbarProps {
   onOpenImportM3U: () => void;
   onOpenSettings: () => void;
   onOpenShortcuts?: () => void;
+  onOpenInstallQr?: () => void;
   tvMode: boolean;
   onToggleTVMode: () => void;
   kidsMode: boolean;
@@ -38,6 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenImportM3U,
   onOpenSettings,
   onOpenShortcuts,
+  onOpenInstallQr,
   tvMode,
   onToggleTVMode,
   kidsMode,
@@ -201,6 +204,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Gamepad2 className="w-4 h-4" />
               <span className="hidden lg:inline">{tvMode ? 'TV Mode ON' : 'TV Mode'}</span>
             </button>
+
+            {/* QR Code Install Button */}
+            {onOpenInstallQr && (
+              <button
+                onClick={onOpenInstallQr}
+                className="tv-focusable flex items-center space-x-1 px-2.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600/25 to-blue-600/25 hover:from-cyan-600/40 hover:to-blue-600/40 text-cyan-300 hover:text-white border border-cyan-500/35 text-xs font-semibold transition-all hover:scale-105"
+                title="Scan QR Code to install app on Phone or Tablet"
+                aria-label="Scan QR Code to install app"
+              >
+                <QrCode className="w-4 h-4 text-cyan-400" />
+                <span className="hidden sm:inline">Get App (QR)</span>
+              </button>
+            )}
 
             {/* Shortcuts Help */}
             {onOpenShortcuts && (

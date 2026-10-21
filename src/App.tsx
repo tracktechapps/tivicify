@@ -34,6 +34,7 @@ import { TVRemoteSimulator } from './components/TVRemoteSimulator';
 import { ShortcutsGuideModal } from './components/ShortcutsGuideModal';
 import { MiniPlayer } from './components/MiniPlayer';
 import { SavedRecordingsView } from './components/SavedRecordingsView';
+import { InstallQrModal } from './components/InstallQrModal';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
@@ -48,6 +49,7 @@ export function App() {
   const [importM3UOpen, setImportM3UOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [installQrOpen, setInstallQrOpen] = useState(false);
 
   // User state
   const [watchlist, setWatchlist] = useState<MediaItem[]>([]);
@@ -92,21 +94,26 @@ export function App() {
         setSettingsOpen(false);
       } else if (shortcutsOpen) {
         setShortcutsOpen(false);
+      } else if (installQrOpen) {
+        setInstallQrOpen(false);
       } else if (currentTab !== 'home') {
         setCurrentTab('home');
       }
     },
   });
 
-  // Global '?' shortcut for guide
+  // Global '?' and 'q' shortcuts
   useEffect(() => {
-    const handleHelpKey = (e: KeyboardEvent) => {
-      if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes((document.activeElement?.tagName || ''))) {
+    const handleGlobalKeys = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '')) return;
+      if (e.key === '?') {
         setShortcutsOpen((prev) => !prev);
+      } else if (e.key === 'q' || e.key === 'Q') {
+        setInstallQrOpen((prev) => !prev);
       }
     };
-    window.addEventListener('keydown', handleHelpKey);
-    return () => window.removeEventListener('keydown', handleHelpKey);
+    window.addEventListener('keydown', handleGlobalKeys);
+    return () => window.removeEventListener('keydown', handleGlobalKeys);
   }, []);
 
   // Play next episode / video handler
@@ -217,6 +224,7 @@ export function App() {
         onOpenImportM3U={() => setImportM3UOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
+        onOpenInstallQr={() => setInstallQrOpen(true)}
         tvMode={settings.tvMode}
         onToggleTVMode={() => handleUpdateSettings({ tvMode: !settings.tvMode })}
         kidsMode={settings.kidsMode}
@@ -667,12 +675,20 @@ export function App() {
         onUpdateSettings={handleUpdateSettings}
         onClearHistory={handleClearHistory}
         apkPath="./Tivicify.apk"
+        onOpenInstallQr={() => setInstallQrOpen(true)}
       />
 
       {/* TV Remote & Keyboard Shortcuts Modal */}
       <ShortcutsGuideModal
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
+      />
+
+      {/* Install App QR Code Modal */}
+      <InstallQrModal
+        isOpen={installQrOpen}
+        onClose={() => setInstallQrOpen(false)}
+        apkPath="./Tivicify.apk"
       />
     </div>
   );
