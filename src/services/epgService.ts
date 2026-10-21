@@ -52,13 +52,44 @@ export const epgService = {
     const nameLower = (channel.name || '').toLowerCase();
 
     let templates = DEFAULT_SCHEDULE;
-    if (catLower.includes('kid') || catLower.includes('animation') || nameLower.includes('cartoon') || nameLower.includes('abc kids')) {
+    if (nameLower.includes('arise')) {
+      templates = [
+        { title: 'The Morning Show with Reuben Abati', durationMinutes: 60, description: 'Debate, breaking politics, and in-depth national analysis.' },
+        { title: 'Arise NewsHour Live', durationMinutes: 60, description: 'Live reporting from Abuja, Lagos, London, and New York studios.' },
+        { title: 'Prime Time News & World Update', durationMinutes: 60, description: 'Top headline stories, financial markets, and African coverage.' },
+        { title: 'NewsNight Africa Focus', durationMinutes: 60, description: 'In-depth investigative reports and political interviews.' },
+      ];
+    } else if (nameLower.includes('ait')) {
+      templates = [
+        { title: 'Kakaaki: The African Voice', durationMinutes: 60, description: 'Nigeria celebrated morning breakfast show and political analysis.' },
+        { title: 'AIT News at 8 Live', durationMinutes: 60, description: 'Comprehensive national bulletin from DAAR Communications.' },
+        { title: 'Democracy Today & The Public Eye', durationMinutes: 60, description: 'Discussions on national governance and policy reform.' },
+      ];
+    } else if (nameLower.includes('africa magic') || nameLower.includes('nollywood')) {
+      templates = [
+        { title: 'Nollywood Blockbuster: Prime Cinema', durationMinutes: 120, description: 'Celebrated African cinematic feature starring top Nollywood stars.' },
+        { title: 'Tinsel & African Dramatic Series', durationMinutes: 60, description: 'Gripping drama, romance, and boardroom intrigue across Lagos.' },
+        { title: 'African Magic Showcase Spotlight', durationMinutes: 90, description: 'Exclusive African films, comedies, and cultural storytelling.' },
+      ];
+    } else if (nameLower.includes('supersport') || nameLower.includes('fifa') || nameLower.includes('sport')) {
+      templates = [
+        { title: 'Premier League Matchday & World Football Live', durationMinutes: 90, description: 'Live match broadcast, halftime tactical analysis and goals.' },
+        { title: 'World Sports Center & Football Highlights', durationMinutes: 60, description: 'Roundup of European, African, and international leagues.' },
+        { title: 'Championship Spotlight & Press Conference', durationMinutes: 60, description: 'Interviews with star players and coaches before kickoff.' },
+      ];
+    } else if (nameLower.includes('ontv') || nameLower.includes('soundcity') || nameLower.includes('rave')) {
+      templates = [
+        { title: 'City Pulse & Urban Lifestyle Live', durationMinutes: 60, description: 'Fashion, youth culture, entertainment news, and Lagos trends.' },
+        { title: 'Afrobeats Top 10 Countdown', durationMinutes: 60, description: 'Chart-topping Nigerian and international Afrobeats hits.' },
+        { title: 'Lagos Comedy Club & Drama Series', durationMinutes: 60, description: 'Humorous sketches and popular Nigerian comedy series.' },
+      ];
+    } else if (catLower.includes('kid') || catLower.includes('animation') || nameLower.includes('cartoon') || nameLower.includes('abc kids')) {
       templates = CATEGORY_SCHEDULES.kids;
     } else if (catLower.includes('news') || nameLower.includes('news') || nameLower.includes('cnn') || nameLower.includes('bbc')) {
       templates = CATEGORY_SCHEDULES.news;
     } else if (catLower.includes('tech') || catLower.includes('science') || nameLower.includes('nasa') || nameLower.includes('discovery')) {
       templates = CATEGORY_SCHEDULES.tech;
-    } else if (catLower.includes('movie') || nameLower.includes('cinema') || nameLower.includes('nollywood') || nameLower.includes('itage')) {
+    } else if (catLower.includes('movie') || nameLower.includes('cinema')) {
       templates = CATEGORY_SCHEDULES.movies;
     } else if (catLower.includes('sport')) {
       templates = CATEGORY_SCHEDULES.sports;

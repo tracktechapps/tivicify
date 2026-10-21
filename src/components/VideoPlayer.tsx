@@ -165,6 +165,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setCurrentQuality(-1);
     hasTriedFallback.current = false;
 
+    // If stream is an embed or YouTube, bypass Hls.js
+    if (media.streamType === 'embed' || media.streamUrl.includes('youtube.com/embed') || media.streamUrl.includes('player.')) {
+      setIsLoading(false);
+      return;
+    }
+
     // Attach Web Audio enhancer
     try {
       audioEnhancer.attachToVideo(video);
@@ -691,34 +697,44 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onTouchStart={resetControlsTimeout}
       className="fixed inset-0 z-50 bg-black flex items-center justify-center overflow-hidden select-none cursor-default"
     >
-      {/* Video Element */}
-      <video
-        ref={videoRef}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={handleEnded}
-        onWaiting={() => setIsLoading(true)}
-        onPlaying={() => setIsLoading(false)}
-        playsInline
-        className={`w-full h-full ${
-          aspectRatio === 'contain'
-            ? 'object-contain'
-            : aspectRatio === 'cover'
-            ? 'object-cover'
-            : 'object-fill'
-        }`}
-        onClick={togglePlay}
-      >
-        {media.subtitles?.map((sub) => (
-          <track
-            key={sub.lang}
-            kind="subtitles"
-            srcLang={sub.lang}
-            label={sub.label}
-            src={sub.src}
-            default={sub.isDefault}
-          />
-        ))}
-      </video>
+      {/* Video or Embed Iframe Element */}
+      {media.streamType === 'embed' || media.streamUrl.includes('youtube.com/embed') || media.streamUrl.includes('player.') ? (
+        <iframe
+          src={media.streamUrl}
+          title={media.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          className="w-full h-full border-0"
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+          onWaiting={() => setIsLoading(true)}
+          onPlaying={() => setIsLoading(false)}
+          playsInline
+          className={`w-full h-full ${
+            aspectRatio === 'contain'
+              ? 'object-contain'
+              : aspectRatio === 'cover'
+              ? 'object-cover'
+              : 'object-fill'
+          }`}
+          onClick={togglePlay}
+        >
+          {media.subtitles?.map((sub) => (
+            <track
+              key={sub.lang}
+              kind="subtitles"
+              srcLang={sub.lang}
+              label={sub.label}
+              src={sub.src}
+              default={sub.isDefault}
+            />
+          ))}
+        </video>
+      )}
 
       {/* Loading Spinner */}
       {isLoading && !error && (

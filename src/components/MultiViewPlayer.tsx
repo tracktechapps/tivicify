@@ -142,7 +142,7 @@ export const MultiViewPlayer: React.FC<MultiViewPlayerProps> = ({
   }, [activeAudioIndex, isMutedAll]);
 
   // Preset switchers
-  const applyPreset = (presetName: 'news' | 'kids' | 'tech' | 'nigeria') => {
+  const applyPreset = (presetName: 'news' | 'kids' | 'tech' | 'nigeria' | 'sports') => {
     let filtered: ChannelItem[] = [];
     if (presetName === 'news') {
       filtered = channels.filter((c) => (c.category || '').toLowerCase().includes('news') || (c.name || '').toLowerCase().includes('news'));
@@ -159,8 +159,24 @@ export const MultiViewPlayer: React.FC<MultiViewPlayerProps> = ({
         (c.name || '').toLowerCase().includes('discovery') ||
         (c.name || '').toLowerCase().includes('nasa')
       );
+    } else if (presetName === 'sports') {
+      filtered = channels.filter((c) => 
+        (c.category || '').toLowerCase().includes('sport') || 
+        (c.name || '').toLowerCase().includes('sport') || 
+        (c.name || '').toLowerCase().includes('fifa') ||
+        (c.name || '').toLowerCase().includes('red bull')
+      );
     } else if (presetName === 'nigeria') {
-      filtered = channels.filter((c) => (c.country || '').includes('Nigeria') || (c.name || '').toLowerCase().includes('channels') || (c.name || '').toLowerCase().includes('tvc'));
+      filtered = channels.filter((c) => 
+        (c.country || '').includes('Nigeria') || 
+        (c.name || '').toLowerCase().includes('arise') || 
+        (c.name || '').toLowerCase().includes('ait') || 
+        (c.name || '').toLowerCase().includes('channels') || 
+        (c.name || '').toLowerCase().includes('tvc') || 
+        (c.name || '').toLowerCase().includes('ontv') || 
+        (c.name || '').toLowerCase().includes('rave') || 
+        (c.name || '').toLowerCase().includes('magic')
+      );
     }
 
     if (filtered.length >= 2) {
@@ -243,6 +259,12 @@ export const MultiViewPlayer: React.FC<MultiViewPlayerProps> = ({
             className="px-2.5 py-1 rounded-lg hover:bg-slate-700 text-amber-300 transition-colors"
           >
             Nigeria 🇳🇬
+          </button>
+          <button
+            onClick={() => applyPreset('sports')}
+            className="px-2.5 py-1 rounded-lg hover:bg-slate-700 text-rose-300 transition-colors"
+          >
+            Sports ⚽
           </button>
         </div>
 
