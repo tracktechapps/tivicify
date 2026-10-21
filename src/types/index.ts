@@ -54,7 +54,18 @@ export interface WatchProgress {
   lastWatchedAt: number;
 }
 
-export type NavTab = 'home' | 'movies' | 'live' | 'custom' | 'watchlist' | 'search';
+export type NavTab = 'home' | 'movies' | 'live' | 'custom' | 'watchlist' | 'recordings' | 'search';
+
+export interface SavedRecording {
+  id: string;
+  title: string;
+  channelName?: string;
+  recordedAt: number;
+  durationSeconds: number;
+  blobUrl?: string;
+  sizeBytes?: number;
+  thumbnailUrl?: string;
+}
 
 export interface AppSettings {
   tvMode: boolean;
@@ -68,6 +79,7 @@ export interface AppSettings {
   ambientGlow: boolean;
   themeColor: 'blue' | 'red' | 'purple' | 'amber' | 'emerald';
   soundEffects: boolean;
+  lowBandwidthMode: boolean; // Data saver for weak/congested internet
 }
 
 export interface StreamStats {

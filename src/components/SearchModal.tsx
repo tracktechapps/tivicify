@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search as SearchIcon, Film, Radio, Sparkles, Loader2 } from 'lucide-react';
+import { X, Search as SearchIcon, Film, Radio, Sparkles, Loader2, Play } from 'lucide-react';
 import { MediaItem, ChannelItem } from '../types';
 import { tmdbService } from '../services/tmdbService';
 
@@ -10,6 +10,7 @@ interface SearchModalProps {
   customItems: MediaItem[];
   channels: ChannelItem[];
   onSelectMedia: (media: MediaItem) => void;
+  onPlayMedia?: (media: MediaItem) => void;
   tmdbApiKey?: string;
 }
 
@@ -20,6 +21,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   customItems,
   channels,
   onSelectMedia,
+  onPlayMedia,
   tmdbApiKey = '',
 }) => {
   const [query, setQuery] = useState('');
@@ -59,34 +61,61 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   const normalizedQuery = query.toLowerCase().trim();
 
-  // Local search across curated & custom
+  // Local search across curated & custom with full null safety
   const matchedCurated = normalizedQuery
     ? curatedItems.filter(
         (item) =>
-          item.title.toLowerCase().includes(normalizedQuery) ||
-          item.genres.some((g) => g.toLowerCase().includes(normalizedQuery)) ||
-          (item.director && item.director.toLowerCase().includes(normalizedQuery))
+          (item.title || '').toLowerCase().includes(normalizedQuery) ||
+          (item.genres || []).some((g) => (g || '').toLowerCase().includes(normalizedQuery)) ||
+          ((item.director || '').toLowerCase().includes(normalizedQuery)) ||
+          (item.cast || []).some((c) => (c || '').toLowerCase().includes(normalizedQuery))
       )
     : [];
 
   const matchedCustom = normalizedQuery
     ? customItems.filter(
         (item) =>
-          item.title.toLowerCase().includes(normalizedQuery) ||
-          item.genres.some((g) => g.toLowerCase().includes(normalizedQuery))
+          (item.title || '').toLowerCase().includes(normalizedQuery) ||
+          (item.genres || []).some((g) => (g || '').toLowerCase().includes(normalizedQuery))
       )
     : [];
 
   const matchedChannels = normalizedQuery
     ? channels.filter(
         (ch) =>
-          ch.name.toLowerCase().includes(normalizedQuery) ||
-          ch.category.toLowerCase().includes(normalizedQuery)
+          (ch.name || '').toLowerCase().includes(normalizedQuery) ||
+          (ch.category || '').toLowerCase().includes(normalizedQuery) ||
+          (ch.country || '').toLowerCase().includes(normalizedQuery) ||
+          (ch.currentProgram || '').toLowerCase().includes(normalizedQuery)
       )
     : [];
 
+  const handleLaunchChannel = (channel: ChannelItem) => {
+    onClose();
+    const mediaItem: MediaItem = {
+      id: channel.id,
+      title: channel.name,
+      description: channel.epgDescription || channel.currentProgram || 'Live TV Broadcast',
+      type: 'live',
+      source: 'iptv',
+      genres: ['Live TV', channel.category || 'General'],
+      posterUrl: channel.logoUrl || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=500&q=80',
+      backdropUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1920&q=80',
+      streamUrl: channel.streamUrl,
+      streamType: 'hls',
+      year: new Date().getFullYear(),
+      duration: 'Live',
+      rating: 'Live',
+    };
+    if (onPlayMedia) {
+      onPlayMedia(mediaItem);
+    } else {
+      onSelectMedia(mediaItem);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6 pt-16 sm:pt-20 bg-black/85 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6 pt-12 sm:pt-16 bg-black/85 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-3xl rounded-2xl bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         
         {/* Search Input Bar */}
@@ -95,10 +124,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           <input
             type="text"
             autoFocus
-            placeholder="Search movies, public domain cinema, live TV, genres..."
+            placeholder="Search movies, TV series, cartoons, kids, tech, live channels..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-transparent pl-3 pr-10 text-white placeholder-gray-500 text-base sm:text-lg focus:outline-none"
+            className="w-full bg-transparent pl-3 pr-10 text-white placeholder-gray-500 text-sm sm:text-base focus:outline-none"
           />
           {isSearchingTmdb && <Loader2 className="w-4 h-4 text-blue-400 animate-spin mr-3" />}
           <button
@@ -114,34 +143,70 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           {query.trim() === '' ? (
             <div className="py-12 text-center text-gray-500">
               <Film className="w-10 h-10 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Type a movie title, actor, or genre to search</p>
+              <p className="text-sm">Type a movie, TV series, kids cartoon, tech channel, or country</p>
               <div className="flex flex-wrap justify-center gap-2 mt-4">
-                {['Sci-Fi', 'Horror', 'Animation', 'NASA', 'Comedy', '1927', '1968'].map((tag) => (
+                {['Kids', 'Cartoons', 'Nigeria', 'Tech', 'Discovery', 'NASA', 'Comedy', 'Sci-Fi'].map((tag) => (
                   <button
                     key={tag}
                     onClick={() => setQuery(tag)}
-                    className="px-3 py-1 rounded-full text-xs bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white transition-colors"
+                    className="px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs text-gray-300 transition-colors"
                   >
                     {tag}
                   </button>
                 ))}
               </div>
             </div>
-          ) : matchedCurated.length === 0 &&
-            matchedCustom.length === 0 &&
-            matchedChannels.length === 0 &&
-            tmdbResults.length === 0 ? (
-            <div className="py-12 text-center text-gray-400">
-              <p className="text-sm">No results found for "{query}"</p>
+          ) : matchedCurated.length === 0 && matchedChannels.length === 0 && matchedCustom.length === 0 && tmdbResults.length === 0 && !isSearchingTmdb ? (
+            <div className="py-12 text-center text-gray-500">
+              <SearchIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <p className="text-sm font-medium">No results found for "{query}"</p>
+              <p className="text-xs text-gray-400 mt-1">Try another keyword, country flag, or category.</p>
             </div>
           ) : (
             <>
-              {/* Curated & Open Movies Results */}
+              {/* Live TV Channels Found */}
+              {matchedChannels.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-red-500 mb-3 flex items-center space-x-1.5">
+                    <Radio className="w-3.5 h-3.5" />
+                    <span>Live TV Channels ({matchedChannels.length})</span>
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {matchedChannels.map((channel) => (
+                      <div
+                        key={channel.id}
+                        onClick={() => handleLaunchChannel(channel)}
+                        className="tv-focusable flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-700 cursor-pointer transition-colors group"
+                      >
+                        <div className="flex items-center space-x-3 overflow-hidden">
+                          <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {channel.logoUrl ? (
+                              <img src={channel.logoUrl} alt={channel.name} className="w-full h-full object-contain p-0.5" />
+                            ) : (
+                              <Radio className="w-5 h-5 text-red-400" />
+                            )}
+                          </div>
+                          <div className="overflow-hidden">
+                            <h4 className="text-xs font-bold text-gray-200 group-hover:text-red-400 truncate">{channel.name}</h4>
+                            <div className="flex items-center space-x-1 text-[10px] text-gray-400 truncate">
+                              <span>{channel.category || 'General'}</span>
+                              {channel.country && <span>• {channel.country}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <Play className="w-4 h-4 text-red-400 flex-shrink-0 ml-2" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Curated Movies, Series & Documentaries */}
               {matchedCurated.length > 0 && (
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-3 flex items-center space-x-1.5">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Free & Legal Masterpieces ({matchedCurated.length})</span>
+                    <span>Movies, TV Shows & Documentaries ({matchedCurated.length})</span>
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {matchedCurated.map((item) => (
@@ -157,61 +222,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                           <img
                             src={item.posterUrl}
                             alt={item.title}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                         <h4 className="text-xs font-bold text-gray-200 group-hover:text-blue-400 line-clamp-1">
                           {item.title}
                         </h4>
                         <p className="text-[10px] text-gray-400">{item.year} • {item.genres[0]}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Channels */}
-              {matchedChannels.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-red-400 mb-3 flex items-center space-x-1.5">
-                    <Radio className="w-3.5 h-3.5" />
-                    <span>Live TV Channels ({matchedChannels.length})</span>
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {matchedChannels.map((channel) => (
-                      <div
-                        key={channel.id}
-                        onClick={() => {
-                          onClose();
-                          onSelectMedia({
-                            id: channel.id,
-                            title: channel.name,
-                            description: channel.currentProgram || 'Live TV Broadcast',
-                            type: 'live',
-                            source: 'iptv',
-                            genres: ['Live TV', channel.category],
-                            posterUrl: channel.logoUrl || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=500&q=80',
-                            backdropUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1920&q=80',
-                            streamUrl: channel.streamUrl,
-                            streamType: 'hls',
-                            year: 2024,
-                            duration: 'Live',
-                            rating: 'Live',
-                          });
-                        }}
-                        className="tv-focusable flex items-center space-x-3 p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-700 cursor-pointer transition-colors"
-                      >
-                        <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {channel.logoUrl ? (
-                            <img src={channel.logoUrl} alt={channel.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <Radio className="w-5 h-5 text-red-400" />
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-gray-200">{channel.name}</h4>
-                          <span className="text-[10px] text-gray-400">{channel.category}</span>
-                        </div>
                       </div>
                     ))}
                   </div>

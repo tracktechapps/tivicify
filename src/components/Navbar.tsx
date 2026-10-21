@@ -10,7 +10,8 @@ import {
   Gamepad2,
   FolderPlus,
   HelpCircle,
-  Baby
+  Baby,
+  HardDrive
 } from 'lucide-react';
 import { NavTab } from '../types';
 
@@ -100,6 +101,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                 <span>Live TV</span>
+              </button>
+              <button
+                onClick={() => onSelectTab('recordings')}
+                className={`tv-focusable px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1 ${
+                  currentTab === 'recordings'
+                    ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                    : 'text-gray-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <HardDrive className="w-3.5 h-3.5 text-red-400" />
+                <span>DVR & Saves</span>
               </button>
               <button
                 onClick={() => onSelectTab('custom')}
@@ -258,6 +270,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <PlusCircle className="w-5 h-5 mb-0.5" />
           <span>Hub</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('recordings')}
+          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[11px] font-medium transition-colors ${
+            currentTab === 'recordings' ? 'text-red-400 font-bold' : 'text-gray-400'
+          }`}
+        >
+          <HardDrive className="w-5 h-5 mb-0.5" />
+          <span>DVR</span>
         </button>
 
         <button

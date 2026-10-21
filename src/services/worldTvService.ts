@@ -1,5 +1,6 @@
 import { ChannelItem } from '../types';
 import { parseM3UPlaylist } from './iptvParser';
+import { storageService } from './storageService';
 
 export interface CountryOption {
   code: string;
@@ -13,7 +14,7 @@ export interface IptvDirectoryOption {
   name: string;
   icon: string;
   playlistUrl: string;
-  group: 'category' | 'region';
+  group: 'category' | 'region' | 'freetv';
 }
 
 export const WORLD_COUNTRIES: CountryOption[] = [
@@ -36,17 +37,34 @@ export const WORLD_COUNTRIES: CountryOption[] = [
   { code: 'mx', name: 'Mexico', flag: '🇲🇽', playlistUrl: 'https://iptv-org.github.io/iptv/countries/mx.m3u' },
 ];
 
-// IPTV-org Official Category & Region Directories
+// IPTV-org and Free-TV Official Category & Region Directories
 export const IPTV_ORG_DIRECTORIES: IptvDirectoryOption[] = [
+  // Kids & Cartoons
+  { id: 'dir-kids-zone', name: 'Kid Zone & Cartoons', icon: '👶', playlistUrl: 'https://iptv-org.github.io/iptv/categories/kids.m3u', group: 'category' },
+  { id: 'dir-animation', name: 'Animation & Anime', icon: '🎨', playlistUrl: 'https://iptv-org.github.io/iptv/categories/animation.m3u', group: 'category' },
+
+  // Tech, Science & Docs
+  { id: 'dir-tech-science', name: 'Tech, Science & STEM', icon: '🔬', playlistUrl: 'https://iptv-org.github.io/iptv/categories/science.m3u', group: 'category' },
+  { id: 'dir-documentary', name: 'Documentaries & Nature', icon: '🦁', playlistUrl: 'https://iptv-org.github.io/iptv/categories/documentary.m3u', group: 'category' },
+
+  // Movies & Series
   { id: 'dir-movies', name: 'Movies & Cinema', icon: '🎬', playlistUrl: 'https://iptv-org.github.io/iptv/categories/movies.m3u', group: 'category' },
   { id: 'dir-classic', name: 'Classic TV', icon: '📺', playlistUrl: 'https://iptv-org.github.io/iptv/categories/classic.m3u', group: 'category' },
   { id: 'dir-series', name: 'Series & Drama', icon: '🍿', playlistUrl: 'https://iptv-org.github.io/iptv/categories/series.m3u', group: 'category' },
-  { id: 'dir-animation', name: 'Animation & Kids', icon: '🎨', playlistUrl: 'https://iptv-org.github.io/iptv/categories/animation.m3u', group: 'category' },
-  { id: 'dir-documentary', name: 'Documentaries', icon: '🦁', playlistUrl: 'https://iptv-org.github.io/iptv/categories/documentary.m3u', group: 'category' },
   { id: 'dir-comedy', name: 'Comedy & Shows', icon: '🎭', playlistUrl: 'https://iptv-org.github.io/iptv/categories/comedy.m3u', group: 'category' },
   { id: 'dir-sports', name: 'Sports TV', icon: '⚽', playlistUrl: 'https://iptv-org.github.io/iptv/categories/sports.m3u', group: 'category' },
   { id: 'dir-news', name: 'World News 24/7', icon: '📰', playlistUrl: 'https://iptv-org.github.io/iptv/categories/news.m3u', group: 'category' },
   { id: 'dir-music', name: 'Music & Concerts', icon: '🎵', playlistUrl: 'https://iptv-org.github.io/iptv/categories/music.m3u', group: 'category' },
+
+  // Free-TV Repository (github.com/free-tv/iptv)
+  { id: 'dir-freetv-master', name: 'Free-TV Global Master (2000+)', icon: '⚡', playlistUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8', group: 'freetv' },
+  { id: 'dir-freetv-usa', name: 'Free-TV USA Streams', icon: '🇺🇸', playlistUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_usa.m3u8', group: 'freetv' },
+  { id: 'dir-freetv-uk', name: 'Free-TV UK Streams', icon: '🇬🇧', playlistUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_uk.m3u8', group: 'freetv' },
+  { id: 'dir-freetv-nigeria', name: 'Free-TV Nigeria Direct', icon: '🇳🇬', playlistUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_nigeria.m3u8', group: 'freetv' },
+  { id: 'dir-freetv-movies', name: 'Free-TV Movies Collection', icon: '🎞️', playlistUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_zz_movies.m3u8', group: 'freetv' },
+  { id: 'dir-freetv-docs', name: 'Free-TV Docs & Wildlife', icon: '🌿', playlistUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_zz_documentaries_en.m3u8', group: 'freetv' },
+
+  // Regions
   { id: 'dir-africa', name: 'Pan-Africa Streams', icon: '🌍', playlistUrl: 'https://iptv-org.github.io/iptv/regions/afr.m3u', group: 'region' },
   { id: 'dir-americas', name: 'Americas', icon: '🌎', playlistUrl: 'https://iptv-org.github.io/iptv/regions/nam.m3u', group: 'region' },
   { id: 'dir-europe', name: 'Europe', icon: '🏰', playlistUrl: 'https://iptv-org.github.io/iptv/regions/eur.m3u', group: 'region' },
@@ -55,21 +73,136 @@ export const IPTV_ORG_DIRECTORIES: IptvDirectoryOption[] = [
 
 export const WORLD_GENRES = [
   { id: 'all', label: 'All Channels' },
-  { id: 'News', label: 'News' },
+  { id: 'Kids', label: 'Kid Zone & Cartoons' },
+  { id: 'Tech', label: 'Tech & Science' },
+  { id: 'News', label: 'News 24/7' },
   { id: 'Sports', label: 'Sports' },
   { id: 'Movies', label: 'Movies & Cinema' },
-  { id: 'Animation', label: 'Animation & Kids' },
+  { id: 'Animation', label: 'Animation & Anime' },
   { id: 'Documentary', label: 'Documentary' },
   { id: 'Music', label: 'Music' },
-  { id: 'Science', label: 'Science & Tech' },
   { id: 'Entertainment', label: 'Entertainment' },
   { id: 'Culture', label: 'Culture & Local' },
   { id: 'Religious', label: 'Faith & Community' },
 ];
 
-// Rich starter catalog of verified working live TV streams, including Nigerian stations
+// Rich starter catalog of verified working live TV streams
 export const GLOBAL_STARTER_CHANNELS: ChannelItem[] = [
-  // --- NIGERIAN LIVE TV CHANNELS (Verified working streams) ---
+  // --- KID ZONE & CARTOONS (Verified working streams) ---
+  {
+    id: 'ch-cartoon-network',
+    name: 'Cartoon Network (India)',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/80/Cartoon_Network_2010_logo.svg',
+    streamUrl: 'https://drk6xq0vhn.gpcdn.net/live/cn_sd_abr/index.m3u8',
+    category: 'Kids',
+    country: 'Kid Zone 👶',
+    currentProgram: 'Ben 10, Teen Titans & Classic Toons',
+    epgDescription: 'Non-stop top-rated animation series, adventures, and cartoons for children of all ages.',
+  },
+  {
+    id: 'ch-cartoon-classics',
+    name: 'Cartoon Classics 24/7',
+    logoUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=128&q=80',
+    streamUrl: 'https://daiconnect.com/live/hls/tvup/rk-cartoonclassics/578f4b7eb725168349ec0af81b21d388/index.m3u8',
+    category: 'Kids',
+    country: 'Kid Zone 👶',
+    currentProgram: 'Looney Tunes, Popeye & Vintage Cartoons',
+    epgDescription: 'Timeless classic animation, Popeye, Betty Boop, and Golden Age animated shorts restored.',
+  },
+  {
+    id: 'ch-abc-kids',
+    name: 'ABC Kids TV Zone',
+    logoUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=128&q=80',
+    streamUrl: 'https://c.mjh.nz/abc-kids.m3u8',
+    category: 'Kids',
+    country: 'Kid Zone 👶',
+    currentProgram: 'Preschool Learning & Animated Adventures',
+    epgDescription: 'Safe, educational, award-winning programs designed for young children and families.',
+  },
+  {
+    id: 'ch-abc-entertains',
+    name: 'ABC Entertains & Toons',
+    logoUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=128&q=80',
+    streamUrl: 'https://c.mjh.nz/abc-me.m3u8',
+    category: 'Kids',
+    country: 'Kid Zone 👶',
+    currentProgram: 'Action Animated Series & Comedy Toons',
+    epgDescription: 'High-energy youth series, cartoons, gaming shows, and comedy animation.',
+  },
+  {
+    id: 'ch-3abn-kids',
+    name: '3ABN Kids TV',
+    logoUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=128&q=80',
+    streamUrl: 'https://3abn.bozztv.com/3abn2/Kids_live/smil:Kids_live.smil/playlist.m3u8',
+    category: 'Kids',
+    country: 'Kid Zone 👶',
+    currentProgram: 'Nature Tales & Kids Bible Adventures',
+    epgDescription: 'Wholesome family programming, science explorations, songs, and puppet adventures.',
+  },
+  {
+    id: 'ch-bejoy-kids',
+    name: 'BeJoy Kids Family TV',
+    logoUrl: 'https://images.unsplash.com/photo-1514539079130-25950c84af65?auto=format&fit=crop&w=128&q=80',
+    streamUrl: 'https://stream.paroledivita.org/bejoy.m3u8',
+    category: 'Kids',
+    country: 'Kid Zone 👶',
+    currentProgram: 'Animated Tales & Character Building',
+    epgDescription: 'Delightful animations, family storytelling, and cheerful songs for youngsters.',
+  },
+
+  // --- TECH, SCIENCE & SPACE EXPLORATION ---
+  {
+    id: 'ch-discovery-channel',
+    name: 'Discovery Channel HD',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/23/Discovery_Channel_logo_2019.svg',
+    streamUrl: 'https://streaming.aurora.enhanced.live/live/mpc/enl0eG1mLmVncmVzcy5mZDJ2eHI=/out/v1/IT_SIMULCAST/DISCOVERYCHANNEL/CMAF/index.m3u8',
+    category: 'Tech',
+    country: 'Tech & Science 🔬',
+    currentProgram: 'Mythbusters, Engineering Feats & Science',
+    epgDescription: 'Premier international science and technology network exploring modern innovation and wildlife.',
+  },
+  {
+    id: 'ch-discovery-science',
+    name: 'Discovery Science HD',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Discovery_Science_logo_2017.svg',
+    streamUrl: 'https://drk6xq0vhn.gpcdn.net/live/discovery_science_abr/index.m3u8',
+    category: 'Tech',
+    country: 'Tech & Science 🔬',
+    currentProgram: 'How It\'s Made & Space Mysteries',
+    epgDescription: 'In-depth tech documentaries, futuristic robotics, physics breakthroughs, and cosmos explorations.',
+  },
+  {
+    id: 'ch-nasa-hd',
+    name: 'NASA TV HD',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg',
+    streamUrl: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',
+    category: 'Tech',
+    country: 'USA / Tech 🚀',
+    currentProgram: 'Live ISS Feed & Artemis Deep Space',
+    epgDescription: 'Continuous high definition live space exploration, rocket launches, and spacewalks from NASA.',
+  },
+  {
+    id: 'ch-nasa-media',
+    name: 'NASA TV Media Feed',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg',
+    streamUrl: 'https://ntv2.akamaized.net/hls/live/2013923/NASA-NTV2-HLS/master.m3u8',
+    category: 'Tech',
+    country: 'USA / Tech 🚀',
+    currentProgram: 'Mars Rover Imagery & Astronaut Briefings',
+    epgDescription: 'Direct satellite mission feeds, telemetry broadcasts, and planetary science documentaries.',
+  },
+  {
+    id: 'ch-inwonder-science',
+    name: 'InWonder Science & Exploration 4K',
+    logoUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=128&q=80',
+    streamUrl: 'https://amg00861-terninternation-inwonder-samsungau-1k63k.amagi.tv/playlist/amg00861-terninternation-inwonder-samsungau/playlist.m3u8',
+    category: 'Tech',
+    country: 'Tech & Science 🔬',
+    currentProgram: 'Cosmic Wonders & Microscopic Universe',
+    epgDescription: 'Stunning 4K science cinematography exploring quantum phenomena, space mysteries, and robotics.',
+  },
+
+  // --- NIGERIAN LIVE TV CHANNELS ---
   {
     id: 'ch-ng-silverbird',
     name: 'Silverbird News 24',
@@ -88,7 +221,7 @@ export const GLOBAL_STARTER_CHANNELS: ChannelItem[] = [
     category: 'Entertainment',
     country: 'Nigeria 🇳🇬',
     currentProgram: 'Wazobia Express & Naija Comedy Live',
-    epgDescription: 'Urban Nigerian entertainment, music countdowns, lifestyle shows, and dramas.',
+    epgDescription: 'Urban Nigerian entertainment, music countdowns, comedy shows, and dramas.',
   },
   {
     id: 'ch-ng-wazobia-ph',
@@ -99,6 +232,16 @@ export const GLOBAL_STARTER_CHANNELS: ChannelItem[] = [
     country: 'Nigeria 🇳🇬',
     currentProgram: 'South-South Spotlight & Highlife Hits',
     epgDescription: 'Regional cultural entertainment broadcast from Port Harcourt, Rivers State.',
+  },
+  {
+    id: 'ch-ng-itage',
+    name: 'Itage TV Nollywood Cinema',
+    logoUrl: 'https://i.imgur.com/ojLIfkt.jpeg',
+    streamUrl: 'https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_011/Stream/playlist.m3u8',
+    category: 'Movies',
+    country: 'Nigeria 🇳🇬',
+    currentProgram: 'Nollywood Blockbusters & African Cinema',
+    epgDescription: 'Continuous Nollywood movies, drama series, and celebrated West African cinematic productions.',
   },
   {
     id: 'ch-ng-superscreen',
@@ -203,16 +346,6 @@ export const GLOBAL_STARTER_CHANNELS: ChannelItem[] = [
 
   // --- GLOBAL & US/UK CHANNELS ---
   {
-    id: 'ch-nasa-hd',
-    name: 'NASA TV HD',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg',
-    streamUrl: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',
-    category: 'Science',
-    country: 'USA 🇺🇸',
-    currentProgram: 'Live ISS Feed & Artemis Missions',
-    epgDescription: 'Continuous high definition live space exploration and spacewalks from NASA.',
-  },
-  {
     id: 'ch-dw-english',
     name: 'DW News 24/7',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Deutsche_Welle_symbol_2012.svg',
@@ -312,56 +445,64 @@ export const GLOBAL_STARTER_CHANNELS: ChannelItem[] = [
     currentProgram: 'Ambient Lo-Fi Beats to Relax & Study',
     epgDescription: 'Continuous calming nature scenes paired with relaxing ambient music.',
   },
-  {
-    id: 'ch-kids-cartoon-central',
-    name: 'Golden Age Cartoons 24/7',
-    logoUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=128&q=80',
-    streamUrl: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
-    category: 'Animation',
-    country: 'USA 🇺🇸',
-    currentProgram: 'Classic Fleischer & Popeye Marathon',
-    epgDescription: 'Timeless vintage cartoons restored for family and children.',
-  },
 ];
 
 export const worldTvService = {
-  // Fetch channels for a specific country or global list from iptv-org
+  // Fetch channels for a specific country with local cache fallback for low connectivity
   async fetchCountryChannels(countryCode: string): Promise<ChannelItem[]> {
     const country = WORLD_COUNTRIES.find((c) => c.code === countryCode) || WORLD_COUNTRIES[0];
+    
+    // Check offline / low connectivity cache first
+    const cached = storageService.getCachedPlaylist(country.playlistUrl);
+
     try {
-      const res = await fetch(country.playlistUrl);
+      const res = await fetch(country.playlistUrl, { signal: AbortSignal.timeout(6000) });
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const text = await res.text();
       const channels = parseM3UPlaylist(text);
 
-      // Enhance with country label & flag
-      return channels.slice(0, 60).map((ch) => ({
+      const enhanced = channels.slice(0, 80).map((ch) => ({
         ...ch,
         country: `${country.name} ${country.flag}`,
       }));
+
+      // Cache for offline / low connectivity
+      storageService.cachePlaylist(country.playlistUrl, enhanced);
+      return enhanced;
     } catch (e) {
-      console.warn(`Could not load playlist for ${country.name}:`, e);
+      console.warn(`Network fetch failed for ${country.name}. Using cache if available:`, e);
+      if (cached && cached.length > 0) {
+        return cached;
+      }
       return [];
     }
   },
 
-  // Fetch channels directly from iptv-org directory (Categories or Regions)
+  // Fetch channels from IPTV-org or Free-TV with local cache fallback
   async fetchDirectoryPlaylist(directoryId: string): Promise<ChannelItem[]> {
     const dir = IPTV_ORG_DIRECTORIES.find((d) => d.id === directoryId);
     if (!dir) return [];
+
+    const cached = storageService.getCachedPlaylist(dir.playlistUrl);
+
     try {
-      const res = await fetch(dir.playlistUrl);
+      const res = await fetch(dir.playlistUrl, { signal: AbortSignal.timeout(7000) });
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const text = await res.text();
       const channels = parseM3UPlaylist(text);
 
-      // Enhance with directory label & icon
-      return channels.slice(0, 80).map((ch) => ({
+      const enhanced = channels.slice(0, 100).map((ch) => ({
         ...ch,
         country: `${dir.name} ${dir.icon}`,
       }));
+
+      storageService.cachePlaylist(dir.playlistUrl, enhanced);
+      return enhanced;
     } catch (e) {
-      console.warn(`Could not load IPTV directory ${dir.name}:`, e);
+      console.warn(`Network fetch failed for ${dir.name}. Using cache if available:`, e);
+      if (cached && cached.length > 0) {
+        return cached;
+      }
       return [];
     }
   },

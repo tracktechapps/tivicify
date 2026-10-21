@@ -1,4 +1,4 @@
-import { MediaItem, ChannelItem, WatchProgress, AppSettings } from '../types';
+import { MediaItem, ChannelItem, WatchProgress, AppSettings, SavedRecording } from '../types';
 
 const STORAGE_KEYS = {
   WATCHLIST: 'tivicify_watchlist',
@@ -6,6 +6,8 @@ const STORAGE_KEYS = {
   CUSTOM_STREAMS: 'tivicify_custom_streams',
   CUSTOM_CHANNELS: 'tivicify_custom_channels',
   SETTINGS: 'tivicify_settings',
+  RECORDINGS: 'tivicify_recordings',
+  PLAYLIST_CACHE: 'tivicify_playlist_cache',
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -20,6 +22,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   ambientGlow: true,
   themeColor: 'blue',
   soundEffects: false,
+  lowBandwidthMode: false,
 };
 
 export const storageService = {
@@ -149,5 +152,44 @@ export const storageService = {
     const updated = { ...current, ...settings };
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
     return updated;
+  },
+
+  // Saved Live TV Recordings (DVR)
+  getSavedRecordings(): SavedRecording[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.RECORDINGS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  addSavedRecording(recording: SavedRecording) {
+    const list = this.getSavedRecordings().filter((r) => r.id !== recording.id);
+    list.unshift(recording);
+    localStorage.setItem(STORAGE_KEYS.RECORDINGS, JSON.stringify(list));
+  },
+
+  removeSavedRecording(id: string) {
+    const list = this.getSavedRecordings().filter((r) => r.id !== id);
+    localStorage.setItem(STORAGE_KEYS.RECORDINGS, JSON.stringify(list));
+  },
+
+  // Low Connectivity Playlist Cache
+  getCachedPlaylist(url: string): ChannelItem[] | null {
+    try {
+      const data = localStorage.getItem(`${STORAGE_KEYS.PLAYLIST_CACHE}_${url}`);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  cachePlaylist(url: string, channels: ChannelItem[]) {
+    try {
+      localStorage.setItem(`${STORAGE_KEYS.PLAYLIST_CACHE}_${url}`, JSON.stringify(channels));
+    } catch {
+      // Ignore quota errors gracefully
+    }
   },
 };

@@ -23,7 +23,12 @@ import {
   List,
   Activity,
   Zap,
-  Ear
+  Ear,
+  Circle,
+  Square,
+  Disc,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { MediaItem, ChannelItem, StreamStats } from '../types';
 import { storageService } from '../services/storageService';
@@ -93,6 +98,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     latencyMs: 12,
     hlsVersion: Hls.version,
   });
+
+  // Live TV Session Recording & Data Saver
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordNotice, setRecordNotice] = useState<string | null>(null);
+  const [dataSaverMode, setDataSaverMode] = useState<boolean>(() => storageService.getSettings().lowBandwidthMode);
 
   const hasTriedFallback = useRef(false);
   const controlsTimeoutRef = useRef<number | null>(null);
@@ -168,8 +183,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       const hls = new Hls({
         enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90,
+        // In Data Saver or low connectivity, disable aggressive lowLatency which stalls easily
+        lowLatencyMode: !dataSaverMode,
+        capLevelToPlayerSize: true, // Cap to player screen size, saving significant bandwidth on tablets & phones
+        maxBufferLength: dataSaverMode ? 25 : 60,
+        maxMaxBufferLength: dataSaverMode ? 50 : 120,
+        backBufferLength: dataSaverMode ? 20 : 60,
+        fragLoadingMaxRetry: 8,
+        manifestLoadingMaxRetry: 8,
+        levelLoadingMaxRetry: 8,
+        fragLoadingRetryDelay: 800,
       });
 
       hls.loadSource(media.streamUrl);
@@ -187,6 +210,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             })),
           ];
           setAvailableQualities(qualities);
+
+          // If Data Saver is active, cap to <= 480p
+          if (dataSaverMode) {
+            const lowIdx = data.levels.findIndex((lvl) => (lvl.height || 0) <= 480 && (lvl.height || 0) > 0);
+            hls.currentLevel = lowIdx !== -1 ? lowIdx : 0;
+            setCurrentQuality(hls.currentLevel);
+          }
         }
 
         if (!isLive) {
@@ -450,6 +480,130 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     resetControlsTimeout();
   };
 
+  // Live TV Session Recording (DVR)
+  const startRecording = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      const stream = (video as any).captureStream?.() || (video as any).mozCaptureStream?.();
+      if (!stream) {
+        setRecordNotice('Stream capture not supported in this browser/webview.');
+        setTimeout(() => setRecordNotice(null), 3500);
+        return;
+      }
+
+      recordedChunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+        ? 'video/webm;codecs=vp8,opus'
+        : MediaRecorder.isTypeSupported('video/webm')
+        ? 'video/webm'
+        : '';
+
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        if (recordedChunksRef.current.length === 0) return;
+        const blob = new Blob(recordedChunksRef.current, { type: mimeType || 'video/webm' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Auto trigger download for offline access
+        try {
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `Tivicify_${media.title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } catch {
+          // Ignore download trigger error on restricted webviews
+        }
+
+        // Save into app DVR list
+        storageService.addSavedRecording({
+          id: 'rec-' + Date.now(),
+          title: `${media.title}`,
+          channelName: media.title,
+          recordedAt: Date.now(),
+          durationSeconds: recordingDuration,
+          blobUrl,
+          sizeBytes: blob.size,
+        });
+
+        setRecordNotice(`Session Saved! (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+        setTimeout(() => setRecordNotice(null), 4000);
+      };
+
+      recorder.start(1000);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch (err: any) {
+      console.warn('Recording capture error:', err);
+      setRecordNotice('Live stream recording restricted on this connection.');
+      setTimeout(() => setRecordNotice(null), 3500);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecording(false);
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const toggleDataSaver = () => {
+    const next = !dataSaverMode;
+    setDataSaverMode(next);
+    storageService.saveSettings({ lowBandwidthMode: next });
+    if (hlsRef.current) {
+      if (next) {
+        hlsRef.current.currentLevel = 0;
+        setCurrentQuality(0);
+      } else {
+        hlsRef.current.currentLevel = -1;
+        setCurrentQuality(-1);
+      }
+    }
+    setRecordNotice(next ? '⚡ Data Saver Mode Enabled' : 'Data Saver Disabled');
+    setTimeout(() => setRecordNotice(null), 3000);
+  };
+
+  // Cleanup recorder on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, []);
+
   // Keyboard and TV remote controls listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -670,6 +824,45 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Live TV Session Recording (DVR / Download) */}
+            {isLive && (
+              <button
+                onClick={toggleRecording}
+                className={`tv-focusable flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-md transition-all shadow-md ${
+                  isRecording
+                    ? 'bg-red-600 text-white animate-pulse shadow-red-600/50'
+                    : 'bg-black/50 hover:bg-red-600/80 text-white border border-red-500/40'
+                }`}
+                title={isRecording ? "Stop & Save Recording" : "Record & Save Live TV Session"}
+              >
+                {isRecording ? (
+                  <>
+                    <Square className="w-3.5 h-3.5 fill-current" />
+                    <span>REC {formatTime(recordingDuration)}</span>
+                  </>
+                ) : (
+                  <>
+                    <Circle className="w-3.5 h-3.5 fill-red-500 text-red-500" />
+                    <span className="hidden sm:inline">Record Live</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Data Saver Mode Quick Toggle */}
+            <button
+              onClick={toggleDataSaver}
+              className={`tv-focusable flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md transition-colors ${
+                dataSaverMode
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-black/40 hover:bg-white/20 text-gray-300'
+              }`}
+              title="Data Saver / Low Internet Mode"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">{dataSaverMode ? 'Data Saver ON' : 'Data Saver'}</span>
+            </button>
+
             {/* Live TV Channels Drawer Button */}
             {isLive && liveChannels.length > 0 && (
               <button
@@ -728,6 +921,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             )}
           </div>
         </div>
+
+        {/* Record & Low Bandwidth Status Toast */}
+        {recordNotice && (
+          <div className="self-center mt-2 px-4 py-2 rounded-full bg-slate-900/95 border border-slate-700 text-xs font-semibold text-white shadow-2xl animate-fade-in flex items-center space-x-2 pointer-events-auto">
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span>{recordNotice}</span>
+          </div>
+        )}
 
         {/* Center Watermark */}
         <div className="pointer-events-none flex items-center justify-center opacity-10">
@@ -984,6 +1185,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         </div>
                       </div>
                     )}
+
+                    {/* Low Bandwidth / Data Saver Mode */}
+                    <div className="pt-2 border-t border-slate-700/60">
+                      <button
+                        onClick={toggleDataSaver}
+                        className={`w-full py-1.5 px-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                          dataSaverMode ? 'bg-emerald-600/40 border border-emerald-500 text-emerald-200' : 'text-gray-300 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="flex items-center space-x-1.5">
+                          <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Data Saver (Low Internet)</span>
+                        </span>
+                        {dataSaverMode && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                      </button>
+                    </div>
 
                     {/* Stream Stats Toggle */}
                     <div className="pt-2 border-t border-slate-700/60">

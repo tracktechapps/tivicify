@@ -12,7 +12,8 @@ import {
   Baby,
   Volume2,
   Sparkles,
-  Ear
+  Ear,
+  Zap
 } from 'lucide-react';
 import { AppSettings } from '../types';
 
@@ -182,6 +183,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                   settings.soundEffects ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Low Internet Connectivity & Data Saver Mode */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/60 border border-slate-700">
+            <div className="flex items-center space-x-3">
+              <Zap className="w-6 h-6 text-amber-400" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Low Internet / Data Saver Mode</h3>
+                <p className="text-xs text-gray-400">
+                  Caps stream resolution to 480p, stabilizes buffer on weak connections, and activates offline playlist cache
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onUpdateSettings({ lowBandwidthMode: !settings.lowBandwidthMode })}
+              className={`tv-focusable relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                settings.lowBandwidthMode ? 'bg-amber-600' : 'bg-slate-700'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  settings.lowBandwidthMode ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>

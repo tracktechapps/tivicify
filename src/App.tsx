@@ -33,6 +33,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { TVRemoteSimulator } from './components/TVRemoteSimulator';
 import { ShortcutsGuideModal } from './components/ShortcutsGuideModal';
 import { MiniPlayer } from './components/MiniPlayer';
+import { SavedRecordingsView } from './components/SavedRecordingsView';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
@@ -540,6 +541,16 @@ export function App() {
           </div>
         )}
 
+        {/* ================= RECORDINGS & DVR TAB ================= */}
+        {currentTab === 'recordings' && (
+          <SavedRecordingsView
+            onPlayRecording={(media) => {
+              setActiveMedia(media);
+              setIsMiniPlayer(false);
+            }}
+          />
+        )}
+
         {/* ================= WATCHLIST TAB ================= */}
         {currentTab === 'watchlist' && (
           <div className="space-y-6">
@@ -627,6 +638,10 @@ export function App() {
         customItems={customStreams}
         channels={[...CURATED_CHANNELS, ...customChannels]}
         onSelectMedia={setDetailMedia}
+        onPlayMedia={(media) => {
+          setActiveMedia(media);
+          setIsMiniPlayer(false);
+        }}
         tmdbApiKey={settings.tmdbApiKey}
       />
 
