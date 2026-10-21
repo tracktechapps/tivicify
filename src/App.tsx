@@ -35,6 +35,8 @@ import { ShortcutsGuideModal } from './components/ShortcutsGuideModal';
 import { MiniPlayer } from './components/MiniPlayer';
 import { SavedRecordingsView } from './components/SavedRecordingsView';
 import { InstallQrModal } from './components/InstallQrModal';
+import { MultiViewPlayer } from './components/MultiViewPlayer';
+import { ParentalPinModal } from './components/ParentalPinModal';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
@@ -50,6 +52,8 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [installQrOpen, setInstallQrOpen] = useState(false);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinModalMode, setPinModalMode] = useState<'unlock' | 'set'>('unlock');
 
   // User state
   const [watchlist, setWatchlist] = useState<MediaItem[]>([]);
@@ -96,6 +100,10 @@ export function App() {
         setShortcutsOpen(false);
       } else if (installQrOpen) {
         setInstallQrOpen(false);
+      } else if (pinModalOpen) {
+        setPinModalOpen(false);
+      } else if (currentTab === 'multiview') {
+        setCurrentTab('live');
       } else if (currentTab !== 'home') {
         setCurrentTab('home');
       }
@@ -110,6 +118,8 @@ export function App() {
         setShortcutsOpen((prev) => !prev);
       } else if (e.key === 'q' || e.key === 'Q') {
         setInstallQrOpen((prev) => !prev);
+      } else if (e.key === 'v' || e.key === 'V') {
+        setCurrentTab((prev) => (prev === 'multiview' ? 'live' : 'multiview'));
       }
     };
     window.addEventListener('keydown', handleGlobalKeys);
@@ -205,6 +215,30 @@ export function App() {
     setProgressList([]);
   };
 
+  const handleToggleKidsMode = () => {
+    if (settings.kidsMode && settings.enableParentalPin && settings.parentalPin) {
+      setPinModalMode('unlock');
+      setPinModalOpen(true);
+    } else {
+      handleUpdateSettings({ kidsMode: !settings.kidsMode });
+    }
+  };
+
+  const handlePromptSetPin = () => {
+    setPinModalMode('set');
+    setPinModalOpen(true);
+  };
+
+  const handlePinSuccess = (newPin?: string) => {
+    if (pinModalMode === 'unlock') {
+      handleUpdateSettings({ kidsMode: false });
+      setPinModalOpen(false);
+    } else if (newPin) {
+      handleUpdateSettings({ parentalPin: newPin, enableParentalPin: true });
+      setPinModalOpen(false);
+    }
+  };
+
   const themeGradients: Record<AppSettings['themeColor'], string> = {
     blue: 'from-blue-950/25 via-[#080c14] to-[#080c14]',
     red: 'from-red-950/25 via-[#080c14] to-[#080c14]',
@@ -228,7 +262,7 @@ export function App() {
         tvMode={settings.tvMode}
         onToggleTVMode={() => handleUpdateSettings({ tvMode: !settings.tvMode })}
         kidsMode={settings.kidsMode}
-        onToggleKidsMode={() => handleUpdateSettings({ kidsMode: !settings.kidsMode })}
+        onToggleKidsMode={handleToggleKidsMode}
         watchlistCount={watchlist.length}
       />
 
@@ -398,6 +432,7 @@ export function App() {
             customChannels={customChannels}
             onPlayChannel={setActiveMedia}
             onOpenImportM3U={() => setImportM3UOpen(true)}
+            onOpenMultiView={() => setCurrentTab('multiview')}
             onChannelsPopulated={(newChannels) => {
               const combined = [...customChannels];
               newChannels.forEach((nc) => {
@@ -406,6 +441,18 @@ export function App() {
                 }
               });
               handleImportChannels(combined);
+            }}
+          />
+        )}
+
+        {/* ================= MULTI-VIEW SPLIT/QUAD SCREEN TAB ================= */}
+        {currentTab === 'multiview' && (
+          <MultiViewPlayer
+            channels={[...CURATED_CHANNELS, ...customChannels]}
+            onClose={() => setCurrentTab('live')}
+            onMaximizeChannel={(m) => {
+              setActiveMedia(m);
+              setIsMiniPlayer(false);
             }}
           />
         )}
@@ -676,6 +723,7 @@ export function App() {
         onClearHistory={handleClearHistory}
         apkPath="./Tivicify.apk"
         onOpenInstallQr={() => setInstallQrOpen(true)}
+        onPromptSetPin={handlePromptSetPin}
       />
 
       {/* TV Remote & Keyboard Shortcuts Modal */}
@@ -689,6 +737,15 @@ export function App() {
         isOpen={installQrOpen}
         onClose={() => setInstallQrOpen(false)}
         apkPath="./Tivicify.apk"
+      />
+
+      {/* Parental Control PIN Modal */}
+      <ParentalPinModal
+        isOpen={pinModalOpen}
+        mode={pinModalMode}
+        currentPin={settings.parentalPin}
+        onSuccess={handlePinSuccess}
+        onClose={() => setPinModalOpen(false)}
       />
     </div>
   );

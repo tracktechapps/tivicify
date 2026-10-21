@@ -11,10 +11,15 @@ import {
   Compass,
   Sparkles,
   Zap,
-  X
+  X,
+  LayoutGrid,
+  Clock,
+  Calendar,
+  Layers
 } from 'lucide-react';
 import { ChannelItem, MediaItem } from '../types';
 import { WORLD_COUNTRIES, IPTV_ORG_DIRECTORIES, worldTvService } from '../services/worldTvService';
+import { epgService } from '../services/epgService';
 
 interface LiveTVGuideProps {
   channels: ChannelItem[];
@@ -22,6 +27,7 @@ interface LiveTVGuideProps {
   onPlayChannel: (media: MediaItem) => void;
   onOpenImportM3U: () => void;
   onChannelsPopulated?: (newChannels: ChannelItem[]) => void;
+  onOpenMultiView?: () => void;
 }
 
 export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
@@ -30,8 +36,10 @@ export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
   onPlayChannel,
   onOpenImportM3U,
   onChannelsPopulated,
+  onOpenMultiView,
 }) => {
   const [activeTab, setActiveTab] = useState<'countries' | 'categories' | 'freetv'>('countries');
+  const [viewMode, setViewMode] = useState<'grid' | 'epg'>('grid');
   const [selectedCountry, setSelectedCountry] = useState<string>('all');
   const [selectedDirectory, setSelectedDirectory] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -170,7 +178,18 @@ export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
+        <div className="flex flex-wrap items-center space-x-2 sm:space-x-3 w-full md:w-auto justify-end">
+          {onOpenMultiView && (
+            <button
+              onClick={onOpenMultiView}
+              className="tv-focusable flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-cyan-600/25 transition-all hover:scale-105"
+              title="Watch multiple live channels at once"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>Multi-View TV</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenImportM3U}
             className="tv-focusable flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white border border-slate-700 text-xs sm:text-sm font-semibold transition-all hover:scale-105"
@@ -395,66 +414,199 @@ export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
         )}
       </div>
 
-      {/* Channel Grid - Tablet Responsive (1 col on mobile, 2 col on tablet, 3-4 col on desktop) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-        {filteredChannels.map((channel) => (
-          <div
-            key={channel.id}
-            onClick={() => handleChannelClick(channel)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleChannelClick(channel);
-              }
-            }}
-            tabIndex={0}
-            role="button"
-            className="tv-focusable group flex items-center justify-between p-3.5 md:p-4 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-red-500/60 transition-all duration-200 cursor-pointer hover:scale-[1.02] shadow-sm hover:shadow-xl hover:shadow-red-500/10"
-          >
-            <div className="flex items-center space-x-3 overflow-hidden">
-              {/* Channel Logo */}
-              <div className="relative w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700/60 flex-shrink-0 group-hover:scale-105 transition-transform">
-                {channel.logoUrl ? (
-                  <img
-                    src={channel.logoUrl}
-                    alt={channel.name}
-                    className="w-full h-full object-contain p-1"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <Tv className="w-6 h-6 text-gray-400" />
-                )}
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              </div>
-
-              {/* Title & Info */}
-              <div className="overflow-hidden">
-                <div className="flex items-center space-x-2">
-                  <h3 className="font-bold text-xs sm:text-sm text-gray-100 group-hover:text-red-400 transition-colors truncate">
-                    {channel.name}
-                  </h3>
-                </div>
-                <p className="text-[11px] sm:text-xs text-sky-400 font-medium truncate mt-0.5">
-                  {channel.currentProgram || 'Live Broadcasting'}
-                </p>
-                <div className="flex items-center space-x-1.5 mt-1 text-[10px] sm:text-[11px] text-gray-400">
-                  <span className="px-1.5 py-0.5 bg-slate-800 rounded text-gray-300 border border-slate-700/50">
-                    {channel.category || 'General'}
-                  </span>
-                  {channel.country && <span className="truncate">{channel.country}</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* Play Button */}
-            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-red-600/20 group-hover:bg-red-600 text-red-400 group-hover:text-white flex items-center justify-center flex-shrink-0 transition-all ml-2">
-              <Play className="w-4 h-4 fill-current ml-0.5" />
-            </div>
+      {/* View Switcher Bar */}
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center space-x-2">
+          <span className="text-xs text-gray-400 font-semibold">View Mode:</span>
+          <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`tv-focusable px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-slate-700 text-white shadow'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Channel Cards</span>
+            </button>
+            <button
+              onClick={() => setViewMode('epg')}
+              className={`tv-focusable px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                viewMode === 'epg'
+                  ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Live EPG Schedule</span>
+            </button>
           </div>
-        ))}
+        </div>
+
+        <span className="text-xs text-gray-400 hidden sm:inline">
+          Showing <strong className="text-white">{filteredChannels.length}</strong> stations
+        </span>
       </div>
+
+      {/* Render based on view mode */}
+      {viewMode === 'grid' ? (
+        /* Channel Grid - Tablet Responsive (1 col on mobile, 2 col on tablet, 3-4 col on desktop) */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+          {filteredChannels.map((channel) => (
+            <div
+              key={channel.id}
+              onClick={() => handleChannelClick(channel)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleChannelClick(channel);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              className="tv-focusable group flex items-center justify-between p-3.5 md:p-4 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-red-500/60 transition-all duration-200 cursor-pointer hover:scale-[1.02] shadow-sm hover:shadow-xl hover:shadow-red-500/10"
+            >
+              <div className="flex items-center space-x-3 overflow-hidden">
+                {/* Channel Logo */}
+                <div className="relative w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700/60 flex-shrink-0 group-hover:scale-105 transition-transform">
+                  {channel.logoUrl ? (
+                    <img
+                      src={channel.logoUrl}
+                      alt={channel.name}
+                      className="w-full h-full object-contain p-1"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <Tv className="w-6 h-6 text-gray-400" />
+                  )}
+                  <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                </div>
+
+                {/* Title & Info */}
+                <div className="overflow-hidden">
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-bold text-xs sm:text-sm text-gray-100 group-hover:text-red-400 transition-colors truncate">
+                      {channel.name}
+                    </h3>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-sky-400 font-medium truncate mt-0.5">
+                    {channel.currentProgram || 'Live Broadcasting'}
+                  </p>
+                  <div className="flex items-center space-x-1.5 mt-1 text-[10px] sm:text-[11px] text-gray-400">
+                    <span className="px-1.5 py-0.5 bg-slate-800 rounded text-gray-300 border border-slate-700/50">
+                      {channel.category || 'General'}
+                    </span>
+                    {channel.country && <span className="truncate">{channel.country}</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Play Button */}
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-red-600/20 group-hover:bg-red-600 text-red-400 group-hover:text-white flex items-center justify-center flex-shrink-0 transition-all ml-2">
+                <Play className="w-4 h-4 fill-current ml-0.5" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* EPG Timeline Schedule List */
+        <div className="space-y-3">
+          {filteredChannels.map((channel, idx) => {
+            const epg = epgService.getProgramForChannel(channel);
+            const channelNumber = 101 + idx;
+
+            return (
+              <div
+                key={`epg-${channel.id}`}
+                onClick={() => handleChannelClick(channel)}
+                className="tv-focusable group p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-red-500/60 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:shadow-red-500/10"
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Channel Header & Number */}
+                  <div className="flex items-center space-x-3.5 min-w-[220px]">
+                    <span className="text-xs font-mono font-bold text-gray-400 bg-slate-800 px-2 py-1 rounded-lg shrink-0">
+                      CH {channelNumber}
+                    </span>
+                    <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700/60 shrink-0">
+                      {channel.logoUrl ? (
+                        <img
+                          src={channel.logoUrl}
+                          alt={channel.name}
+                          className="w-full h-full object-contain p-1"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <Tv className="w-6 h-6 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm text-white group-hover:text-red-400 transition-colors truncate">
+                        {channel.name}
+                      </h3>
+                      <div className="flex items-center space-x-1.5 mt-0.5 text-[11px] text-gray-400">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-gray-300">
+                          {channel.category || 'Live TV'}
+                        </span>
+                        {channel.country && <span className="truncate">{channel.country}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Now Playing Program + Live Progress Bar */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <div className="flex items-center space-x-2 truncate">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0"></span>
+                        <strong className="text-white truncate">{epg.current.title}</strong>
+                        <span className="text-gray-400 font-mono text-[11px]">
+                          ({epg.current.start} - {epg.current.end})
+                        </span>
+                      </div>
+                      <span className="text-emerald-400 font-medium text-[11px] shrink-0 ml-2">
+                        {epg.current.remainingMinutes}m left
+                      </span>
+                    </div>
+
+                    {/* Live Progress Bar */}
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mb-1.5">
+                      <div
+                        className="h-full bg-gradient-to-r from-red-600 to-rose-400 rounded-full transition-all duration-500"
+                        style={{ width: `${epg.current.progressPercent}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-gray-400">
+                      <p className="truncate max-w-md">{epg.current.description}</p>
+                      <span className="text-gray-500 truncate hidden lg:inline ml-3">
+                        Next: <span className="text-gray-300">{epg.upNext.title}</span> at {epg.upNext.start}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Tune In Button */}
+                  <div className="flex items-center justify-end shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleChannelClick(channel);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-red-600/20 group-hover:bg-red-600 text-red-300 group-hover:text-white text-xs font-bold flex items-center space-x-1.5 transition-all"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Tune In</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {filteredChannels.length === 0 && (
         <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800">

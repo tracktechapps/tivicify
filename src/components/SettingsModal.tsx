@@ -14,7 +14,8 @@ import {
   Sparkles,
   Ear,
   Zap,
-  QrCode
+  QrCode,
+  Lock
 } from 'lucide-react';
 import { AppSettings } from '../types';
 
@@ -26,6 +27,7 @@ interface SettingsModalProps {
   onClearHistory: () => void;
   apkPath?: string;
   onOpenInstallQr?: () => void;
+  onPromptSetPin?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -36,6 +38,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClearHistory,
   apkPath,
   onOpenInstallQr,
+  onPromptSetPin,
 }) => {
   const [apiKey, setApiKey] = useState(settings.tmdbApiKey || '');
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -214,6 +217,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               />
             </button>
+          </div>
+
+          {/* Parental PIN Protection */}
+          <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Lock className="w-6 h-6 text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Parental Control 4-Digit PIN</h3>
+                  <p className="text-xs text-gray-400">
+                    Require a 4-digit PIN code to turn off Kids Safe Mode or access mature channels
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (!settings.parentalPin && onPromptSetPin) {
+                    onPromptSetPin();
+                  } else {
+                    onUpdateSettings({ enableParentalPin: !settings.enableParentalPin });
+                  }
+                }}
+                className={`tv-focusable relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ml-3 ${
+                  settings.enableParentalPin ? 'bg-amber-600' : 'bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings.enableParentalPin ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-700/60 text-xs">
+              <span className="text-gray-400">
+                Status: {settings.enableParentalPin ? (
+                  <strong className="text-amber-400">PIN Enabled</strong>
+                ) : (
+                  <strong className="text-gray-400">PIN Disabled</strong>
+                )}
+              </span>
+
+              {onPromptSetPin && (
+                <button
+                  type="button"
+                  onClick={onPromptSetPin}
+                  className="tv-focusable px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-semibold text-xs transition-colors"
+                >
+                  {settings.parentalPin ? 'Change PIN' : 'Set 4-Digit PIN'}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Android APK Section */}

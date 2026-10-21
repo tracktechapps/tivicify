@@ -12,7 +12,8 @@ import {
   HelpCircle,
   Baby,
   HardDrive,
-  QrCode
+  QrCode,
+  LayoutGrid
 } from 'lucide-react';
 import { NavTab } from '../types';
 
@@ -104,6 +105,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                 <span>Live TV</span>
+              </button>
+              <button
+                onClick={() => onSelectTab('multiview')}
+                className={`tv-focusable px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1.5 ${
+                  currentTab === 'multiview'
+                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/30'
+                    : 'text-gray-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Multi-View</span>
               </button>
               <button
                 onClick={() => onSelectTab('recordings')}

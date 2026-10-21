@@ -17,6 +17,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultQuality: 'auto',
   volume: 1,
   kidsMode: false,
+  parentalPin: '',
+  enableParentalPin: false,
   audioBoost: 1,
   nightModeAudio: false,
   ambientGlow: true,

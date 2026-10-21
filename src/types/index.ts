@@ -54,7 +54,7 @@ export interface WatchProgress {
   lastWatchedAt: number;
 }
 
-export type NavTab = 'home' | 'movies' | 'live' | 'custom' | 'watchlist' | 'recordings' | 'search';
+export type NavTab = 'home' | 'movies' | 'live' | 'multiview' | 'custom' | 'watchlist' | 'recordings' | 'search';
 
 export interface SavedRecording {
   id: string;
@@ -67,6 +67,15 @@ export interface SavedRecording {
   thumbnailUrl?: string;
 }
 
+export interface EpgProgram {
+  title: string;
+  start: string;
+  end: string;
+  description?: string;
+  progressPercent: number;
+  remainingMinutes: number;
+}
+
 export interface AppSettings {
   tvMode: boolean;
   tmdbApiKey: string;
@@ -74,6 +83,8 @@ export interface AppSettings {
   defaultQuality: 'auto' | '1080p' | '720p' | '480p';
   volume: number;
   kidsMode: boolean;
+  parentalPin?: string;
+  enableParentalPin?: boolean;
   audioBoost: number; // 1 = 100%, 1.5 = 150%, 2 = 200%
   nightModeAudio: boolean;
   ambientGlow: boolean;
