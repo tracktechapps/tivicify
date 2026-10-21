@@ -145,6 +145,7 @@ export function App() {
   // Curated categories
   const blenderMovies = useMemo(() => baseCatalog.filter((m) => m.director?.includes('Blender')), [baseCatalog]);
   const classicCinema = useMemo(() => baseCatalog.filter((m) => m.isPublicDomain && m.type === 'movie'), [baseCatalog]);
+  const classicSeries = useMemo(() => baseCatalog.filter((m) => m.type === 'tv'), [baseCatalog]);
   const animations = useMemo(() => baseCatalog.filter((m) => m.type === 'animation'), [baseCatalog]);
   const documentaries = useMemo(() => baseCatalog.filter((m) => m.type === 'documentary'), [baseCatalog]);
 
@@ -271,6 +272,18 @@ export function App() {
               progressMap={progressMap}
             />
 
+            {/* Classic TV Series & Sitcoms */}
+            {classicSeries.length > 0 && (
+              <MediaCarousel
+                title="Classic TV Series & Shows"
+                icon={Tv}
+                items={classicSeries}
+                onSelectMedia={setDetailMedia}
+                aspectRatio="backdrop"
+                progressMap={progressMap}
+              />
+            )}
+
             {/* Golden Age Cartoons & Animation */}
             <MediaCarousel
               title="Golden Age Animation & Cartoons"
@@ -320,15 +333,15 @@ export function App() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-black text-white">Feature Films & Open Cinema</h1>
+                <h1 className="text-3xl font-black text-white">Feature Films, Series & Documentaries</h1>
                 <p className="text-sm text-gray-400 mt-1">
-                  Browse complete legal movies, remastered public domain masterpieces, and CGI showcases.
+                  Browse complete legal movies, classic TV series, animations, and historical documentaries.
                 </p>
               </div>
 
               {/* Filter Pills */}
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
-                {['All', 'Sci-Fi', 'Horror', 'Animation', 'Comedy', 'Mystery', 'Public Domain'].map(
+                {['All', 'Movies', 'TV Series', 'Documentary', 'Animation', 'Comedy', 'Mystery', 'Horror', 'Sci-Fi', 'Public Domain'].map(
                   (filter) => (
                     <button
                       key={filter}
@@ -350,6 +363,10 @@ export function App() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {baseCatalog.filter((item) => {
                 if (movieFilter === 'All') return true;
+                if (movieFilter === 'Movies') return item.type === 'movie';
+                if (movieFilter === 'TV Series') return item.type === 'tv';
+                if (movieFilter === 'Documentary') return item.type === 'documentary';
+                if (movieFilter === 'Animation') return item.type === 'animation';
                 if (movieFilter === 'Public Domain') return item.isPublicDomain;
                 return item.genres.includes(movieFilter);
               }).map((item) => (

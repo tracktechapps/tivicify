@@ -7,11 +7,13 @@ import {
   Globe, 
   Search, 
   Loader2, 
-  DownloadCloud,
-  CheckCircle2
+  CheckCircle2,
+  Compass,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import { ChannelItem, MediaItem } from '../types';
-import { WORLD_COUNTRIES, worldTvService } from '../services/worldTvService';
+import { WORLD_COUNTRIES, IPTV_ORG_DIRECTORIES, worldTvService } from '../services/worldTvService';
 
 interface LiveTVGuideProps {
   channels: ChannelItem[];
@@ -28,21 +30,23 @@ export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
   onOpenImportM3U,
   onChannelsPopulated,
 }) => {
+  const [activeTab, setActiveTab] = useState<'countries' | 'directory'>('countries');
   const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedDirectory, setSelectedDirectory] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isLoadingCountry, setIsLoadingCountry] = useState<boolean>(false);
+  const [isLoadingDirectory, setIsLoadingDirectory] = useState<boolean>(false);
   const [populatedSuccess, setPopulatedSuccess] = useState<string | null>(null);
 
   const allChannels = [...channels, ...customChannels];
 
   // Extract unique categories
-  const categories = ['All', 'News', 'Sports', 'Movies', 'Animation', 'Music', 'Science', 'Entertainment'];
+  const categories = ['All', 'News', 'Entertainment', 'Culture', 'Religious', 'Sports', 'Movies', 'Animation', 'Music', 'Science'];
 
   // Filter channels by Country, Category, and Search Query
   const filteredChannels = allChannels.filter((ch) => {
     // Country filter
-    if (selectedCountry !== 'all') {
+    if (activeTab === 'countries' && selectedCountry !== 'all') {
       const countryConfig = WORLD_COUNTRIES.find((c) => c.code === selectedCountry);
       if (countryConfig && ch.country && !ch.country.toLowerCase().includes(countryConfig.name.toLowerCase()) && !ch.country.includes(countryConfig.flag)) {
         return false;
@@ -50,8 +54,12 @@ export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
     }
 
     // Category filter
-    if (selectedCategory !== 'All' && ch.category.toLowerCase() !== selectedCategory.toLowerCase()) {
-      return false;
+    if (selectedCategory !== 'All') {
+      const catLower = ch.category.toLowerCase();
+      const targetLower = selectedCategory.toLowerCase();
+      if (!catLower.includes(targetLower)) {
+        return false;
+      }
     }
 
     // Search query
@@ -80,19 +88,39 @@ export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
     );
 
     if (existingForCountry.length < 5) {
-      setIsLoadingCountry(true);
+      setIsLoadingDirectory(true);
       try {
         const fetched = await worldTvService.fetchCountryChannels(countryCode);
         if (fetched.length > 0 && onChannelsPopulated) {
           onChannelsPopulated(fetched);
           setPopulatedSuccess(`Loaded ${fetched.length} live channels from ${country.name}!`);
-          setTimeout(() => setPopulatedSuccess(null), 3000);
+          setTimeout(() => setPopulatedSuccess(null), 3500);
         }
       } catch (err) {
         console.error('Error fetching country channels:', err);
       } finally {
-        setIsLoadingCountry(false);
+        setIsLoadingDirectory(false);
       }
+    }
+  };
+
+  const handleDirectorySelect = async (dirId: string) => {
+    setSelectedDirectory(dirId);
+    const dir = IPTV_ORG_DIRECTORIES.find((d) => d.id === dirId);
+    if (!dir) return;
+
+    setIsLoadingDirectory(true);
+    try {
+      const fetched = await worldTvService.fetchDirectoryPlaylist(dirId);
+      if (fetched.length > 0 && onChannelsPopulated) {
+        onChannelsPopulated(fetched);
+        setPopulatedSuccess(`Populated ${fetched.length} channels from IPTV-org ${dir.name}!`);
+        setTimeout(() => setPopulatedSuccess(null), 3500);
+      }
+    } catch (err) {
+      console.error('Error fetching IPTV-org directory channels:', err);
+    } finally {
+      setIsLoadingDirectory(false);
     }
   };
 
@@ -125,70 +153,137 @@ export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
             <Radio className="w-4 h-4 animate-pulse" />
             <span>World Live TV Channels ({allChannels.length} Channels Online)</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">Global TV Electronic Program Guide</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">Global TV & IPTV-org Directory</h1>
           <p className="text-sm text-gray-400 mt-1 max-w-xl">
-            Stream free-to-air broadcasts, news, sports, and entertainment channels from countries around the world.
+            Stream free-to-air broadcasts, Nigerian stations, news, movies, series, and sports from the worldwide IPTV-org repository directory.
           </p>
         </div>
 
-        <button
-          onClick={onOpenImportM3U}
-          className="tv-focusable flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white border border-slate-700 text-sm font-semibold transition-all hover:scale-105"
-        >
-          <FolderPlus className="w-4 h-4" />
-          <span>Import Custom M3U</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={onOpenImportM3U}
+            className="tv-focusable flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white border border-slate-700 text-sm font-semibold transition-all hover:scale-105"
+          >
+            <FolderPlus className="w-4 h-4" />
+            <span>Import M3U</span>
+          </button>
+        </div>
       </div>
 
-      {/* Country Selector Carousel / Pills */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center space-x-1.5">
-            <Globe className="w-3.5 h-3.5 text-sky-400" />
-            <span>Select Country / Region</span>
-          </span>
-          {isLoadingCountry && (
-            <span className="text-xs text-sky-400 flex items-center space-x-1">
+      {/* Directory Mode Toggle: Countries vs IPTV-org Repo Categories */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setActiveTab('countries')}
+            className={`tv-focusable flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+              activeTab === 'countries'
+                ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
+                : 'bg-slate-800/80 hover:bg-slate-700 text-gray-300'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Countries & Nigeria 🇳🇬</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('directory')}
+            className={`tv-focusable flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+              activeTab === 'directory'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30'
+                : 'bg-slate-800/80 hover:bg-slate-700 text-gray-300'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>IPTV-org Global Directory</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-400 text-slate-900 font-extrabold uppercase">Repo</span>
+          </button>
+        </div>
+
+        {/* Status Indicators */}
+        <div className="flex items-center space-x-2">
+          {isLoadingDirectory && (
+            <span className="text-xs text-sky-400 flex items-center space-x-1.5 animate-pulse">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Populating live channels...</span>
+              <span>Fetching IPTV-org playlist...</span>
             </span>
           )}
           {populatedSuccess && (
-            <span className="text-xs text-emerald-400 flex items-center space-x-1 animate-fade-in">
+            <span className="text-xs text-emerald-400 flex items-center space-x-1.5 animate-fade-in font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>{populatedSuccess}</span>
             </span>
           )}
         </div>
+      </div>
 
-        <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
-          <button
-            onClick={() => handleCountrySelect('all')}
-            className={`tv-focusable px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 ${
-              selectedCountry === 'all'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                : 'bg-slate-800/80 hover:bg-slate-700 text-gray-300'
-            }`}
-          >
-            <span>🌍 All Global</span>
-          </button>
+      {/* Mode A: Country Selector Carousel / Pills */}
+      {activeTab === 'countries' && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center space-x-1.5">
+              <Globe className="w-3.5 h-3.5 text-sky-400" />
+              <span>Select Country</span>
+            </span>
+          </div>
 
-          {WORLD_COUNTRIES.map((country) => (
+          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
             <button
-              key={country.code}
-              onClick={() => handleCountrySelect(country.code)}
+              onClick={() => handleCountrySelect('all')}
               className={`tv-focusable px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 ${
-                selectedCountry === country.code
-                  ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                selectedCountry === 'all'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'bg-slate-800/80 hover:bg-slate-700 text-gray-300'
               }`}
             >
-              <span>{country.flag}</span>
-              <span>{country.name}</span>
+              <span>🌍 All Global</span>
             </button>
-          ))}
+
+            {WORLD_COUNTRIES.map((country) => (
+              <button
+                key={country.code}
+                onClick={() => handleCountrySelect(country.code)}
+                className={`tv-focusable px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 ${
+                  selectedCountry === country.code
+                    ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                    : 'bg-slate-800/80 hover:bg-slate-700 text-gray-300'
+                }`}
+              >
+                <span>{country.flag}</span>
+                <span>{country.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Mode B: IPTV-org Directory Explorer */}
+      {activeTab === 'directory' && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center space-x-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>IPTV-org Official Directory Playlists (Click to Load)</span>
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
+            {IPTV_ORG_DIRECTORIES.map((dir) => (
+              <button
+                key={dir.id}
+                onClick={() => handleDirectorySelect(dir.id)}
+                className={`tv-focusable px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 ${
+                  selectedDirectory === dir.id
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30'
+                    : 'bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700/60'
+                }`}
+              >
+                <span>{dir.icon}</span>
+                <span>{dir.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search and Category Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
@@ -287,7 +382,7 @@ export const LiveTVGuide: React.FC<LiveTVGuideProps> = ({
         <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800">
           <Tv className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-gray-300">No channels match your criteria</h3>
-          <p className="text-xs text-gray-400 mt-1">Select another country flag or click "All Global" to view channels.</p>
+          <p className="text-xs text-gray-400 mt-1">Select another country flag, switch to IPTV-org Directory, or click "All Global" to view channels.</p>
         </div>
       )}
     </div>
