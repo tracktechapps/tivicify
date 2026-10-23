@@ -1,9 +1,15 @@
-DirectoryIndex index.php index.html
+DirectoryIndex index.html index.php
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /tivicify/
-  RewriteRule ^$ dist/ [R=302,L]
-  RewriteRule ^index\.html$ dist/ [R=302,L]
-  RewriteRule ^index\.php$ dist/ [R=302,L]
+
+  # Allow direct access to existing files and directories
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Route /app and /watch directly to the web streaming player
+  RewriteRule ^app/?$ dist/index.html [L]
+  RewriteRule ^watch/?$ dist/index.html [L]
 </IfModule>
