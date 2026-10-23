@@ -1,0 +1,8 @@
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="background_dark">#FF080C14</color>
+    <color name="primary_blue">#FF2563EB</color>
+    <color name="accent_cyan">#FF06B6D4</color>
+    <color name="ic_launcher_background">#FF080C14</color>
+</resources>
