@@ -1,13 +1,22 @@
 DirectoryIndex index.html index.php
 
+# Pass Authorization header to PHP
+<IfModule mod_setenvif.c>
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
   # Allow direct access to existing files and directories
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
+
+  # Route /admin to the dedicated Control Center
+  RewriteRule ^admin/?$ admin.html [L]
 
   # Route /app and /watch directly to the web streaming player
   RewriteRule ^app/?$ dist/app.html [L]

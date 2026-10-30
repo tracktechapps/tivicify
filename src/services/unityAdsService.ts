@@ -11,6 +11,7 @@ export interface UnityAdCreative {
   videoUrl: string;
   clickUrl: string;
   ctaText: string;
+  numericId?: number;
 }
 
 export const SAMPLE_UNITY_ADS: UnityAdCreative[] = [
@@ -38,22 +39,56 @@ export const SAMPLE_UNITY_ADS: UnityAdCreative[] = [
   },
   {
     id: 'unity_ad_3',
-    title: 'Top Nigerian Streaming Series & Movies',
-    advertiser: 'Tivicify Partner Network',
+    title: 'Tivicify Pro Multi-View — 4 Streams Simultaneously',
+    advertiser: 'Tivicify Network',
     badge: 'Sponsored',
     durationSeconds: 12,
     skipAfterSeconds: 4,
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    clickUrl: 'https://github.com/tracktechapps/tivicify',
+    clickUrl: 'https://tivicify.tracktechdigitals.com.ng/#multiview',
     ctaText: 'Explore More'
   }
 ];
 
+let dynamicAds: UnityAdCreative[] = [...SAMPLE_UNITY_ADS];
+let dynamicConfigLoaded = false;
+
 export const unityAdsService = {
+  async fetchLiveAds() {
+    if (dynamicConfigLoaded) return;
+    try {
+      const res = await fetch('/api/get-ads.php');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.custom_ads) && data.custom_ads.length > 0) {
+        const liveCreatives: UnityAdCreative[] = data.custom_ads
+          .filter((ad: { media_url?: string; format?: string }) => ad.media_url && (ad.format === 'video_interstitial' || ad.format === 'video_rewarded'))
+          .map((ad: { id: number; title: string; sponsor_name: string; media_url: string; target_url: string; cta_text?: string }) => ({
+            id: `custom_ad_${ad.id}`,
+            numericId: ad.id,
+            title: ad.title,
+            advertiser: ad.sponsor_name,
+            badge: 'Sponsored',
+            durationSeconds: 15,
+            skipAfterSeconds: 5,
+            videoUrl: ad.media_url,
+            clickUrl: ad.target_url,
+            ctaText: ad.cta_text || 'Learn More'
+          }));
+
+        if (liveCreatives.length > 0) {
+          dynamicAds = [...liveCreatives, ...SAMPLE_UNITY_ADS];
+        }
+      }
+      dynamicConfigLoaded = true;
+    } catch {
+      // Offline fallback
+    }
+  },
+
   getConfig(): UnityAdConfig {
     const settings = storageService.getSettings();
     return {
-      gameId: settings.unityGameId || '5432101',
+      gameId: settings.unityGameId || '5738491',
       adUnitId: 'Interstitial_Android',
       testMode: settings.unityTestMode !== false,
       enabled: settings.unityAdsEnabled !== false,
@@ -73,11 +108,38 @@ export const unityAdsService = {
   },
 
   getRandomCreative(): UnityAdCreative {
-    const idx = Math.floor(Math.random() * SAMPLE_UNITY_ADS.length);
-    return SAMPLE_UNITY_ADS[idx];
+    if (!dynamicConfigLoaded) {
+      this.fetchLiveAds().catch(() => {});
+    }
+    const idx = Math.floor(Math.random() * dynamicAds.length);
+    return dynamicAds[idx] || SAMPLE_UNITY_ADS[0];
   },
 
-  onAdCompleted() {
+  onAdCompleted(creative?: UnityAdCreative) {
     storageService.recordAdImpression();
+    if (creative?.numericId) {
+      fetch('/api/track-ad.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ad_id: creative.numericId, type: 'impression' })
+      }).catch(() => {});
+    }
+  },
+
+  onAdClicked(creative?: UnityAdCreative) {
+    if (creative?.numericId) {
+      fetch('/api/track-ad.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ad_id: creative.numericId, type: 'click' })
+      }).catch(() => {});
+    }
   }
 };
+
+// Initial background load
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    unityAdsService.fetchLiveAds().catch(() => {});
+  }, 1000);
+}

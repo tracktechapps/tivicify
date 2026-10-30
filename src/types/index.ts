@@ -107,6 +107,7 @@ export interface UserSubscription {
   planName?: string;
   billingCycle?: 'monthly' | 'annual' | 'lifetime';
   activationCode?: string;
+  gateway?: 'bachs' | 'voucher' | 'manual';
   bachsSessionId?: string;
   bachsPaymentId?: string;
 }

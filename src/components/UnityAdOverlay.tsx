@@ -23,7 +23,7 @@ export const UnityAdOverlay: React.FC<UnityAdOverlayProps> = ({
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          unityAdsService.onAdCompleted();
+          unityAdsService.onAdCompleted(adCreative);
           onAdFinished();
           return 0;
         }
@@ -38,7 +38,7 @@ export const UnityAdOverlay: React.FC<UnityAdOverlayProps> = ({
 
   const handleSkip = () => {
     if (secondsUntilSkip === 0) {
-      unityAdsService.onAdCompleted();
+      unityAdsService.onAdCompleted(adCreative);
       onAdFinished();
     }
   };
@@ -60,7 +60,7 @@ export const UnityAdOverlay: React.FC<UnityAdOverlayProps> = ({
         playsInline
         muted={isMuted}
         onEnded={() => {
-          unityAdsService.onAdCompleted();
+          unityAdsService.onAdCompleted(adCreative);
           onAdFinished();
         }}
         className="absolute inset-0 w-full h-full object-cover"
@@ -116,6 +116,7 @@ export const UnityAdOverlay: React.FC<UnityAdOverlayProps> = ({
             href={adCreative.clickUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => unityAdsService.onAdClicked(adCreative)}
             className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-white text-black font-extrabold text-xs hover:bg-gray-100 transition shadow-lg"
           >
             <span>{adCreative.ctaText}</span>

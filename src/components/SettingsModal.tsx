@@ -485,6 +485,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </form>
           </div>
 
+          {/* Admin Control Center Shortcut */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-900/30 to-indigo-900/30 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-600/20 text-cyan-400 flex items-center justify-center font-bold">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-white">Admin Control Center</h3>
+                <p className="text-[11px] text-gray-300">Manage subscriptions, vouchers, custom ad campaigns & Unity network</p>
+              </div>
+            </div>
+            <a
+              href="/admin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition flex items-center justify-center space-x-1.5 whitespace-nowrap self-start sm:self-auto"
+            >
+              <span>Launch Admin Portal</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
           {/* Clear Watch History */}
           <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/60 border border-slate-700">
             <div>

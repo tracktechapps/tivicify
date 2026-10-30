@@ -78,11 +78,13 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     }
   };
 
-  const handleRedeemVoucher = () => {
+  const handleRedeemVoucher = async () => {
+    if (!voucherCode.trim()) return;
+    setIsProcessing(true);
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const result = storageService.verifyActivationCode(voucherCode);
+    const result = await storageService.verifyActivationCodeAsync(voucherCode);
     if (result.success) {
       setSuccessMessage(result.message);
       setVoucherCode('');
@@ -91,6 +93,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     } else {
       setErrorMessage(result.message);
     }
+    setIsProcessing(false);
   };
 
   const handleSubmitSponsor = (e: React.FormEvent) => {

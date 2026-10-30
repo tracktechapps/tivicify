@@ -337,9 +337,55 @@ export const storageService = {
       const list = this.getSponsoredInquiries();
       list.unshift(inquiry);
       localStorage.setItem(STORAGE_KEYS.SPONSORED_INQUIRIES, JSON.stringify(list));
+
+      // Asynchronously sync to server database for Admin Panel review
+      fetch('/api/submit-inquiry.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inquiry)
+      }).catch(() => {});
     } catch {
       // Ignore
     }
+  },
+
+  async verifyActivationCodeAsync(codeRaw: string): Promise<{ success: boolean; tier?: SubscriptionTier; planName?: string; message: string }> {
+    const trimmed = codeRaw.trim().toUpperCase();
+    if (!trimmed) {
+      return { success: false, message: 'Please enter a valid activation voucher code.' };
+    }
+
+    // Try central server verification first
+    try {
+      const res = await fetch('/api/verify-voucher.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmed })
+      });
+      const data = await res.json();
+      if (data.valid) {
+        const expiresAt = new Date(data.expiresAt).getTime();
+        this.saveSubscription({
+          tier: data.tier as SubscriptionTier,
+          isActive: true,
+          expiresAt,
+          gateway: 'voucher',
+          activationCode: trimmed
+        });
+        return {
+          success: true,
+          tier: data.tier as SubscriptionTier,
+          planName: data.tier === 'vip' ? 'VIP Family Pass' : 'Pro Multi-View Pass',
+          message: data.message || `Activated ${data.tier} subscription!`
+        };
+      } else if (data.error) {
+        return { success: false, message: data.error };
+      }
+    } catch {
+      // Fallback to local offline validation if server is unreachable
+    }
+
+    return this.verifyActivationCode(codeRaw);
   },
 
   getSponsoredInquiries(): SponsoredChannelInquiry[] {
