@@ -1,4 +1,4 @@
-import { MediaItem, ChannelItem, WatchProgress, AppSettings, SavedRecording } from '../types';
+import { MediaItem, ChannelItem, WatchProgress, AppSettings, SavedRecording, UserSubscription, SubscriptionTier, SponsoredChannelInquiry } from '../types';
 
 const STORAGE_KEYS = {
   WATCHLIST: 'tivicify_watchlist',
@@ -8,6 +8,9 @@ const STORAGE_KEYS = {
   SETTINGS: 'tivicify_settings',
   RECORDINGS: 'tivicify_recordings',
   PLAYLIST_CACHE: 'tivicify_playlist_cache',
+  SUBSCRIPTION: 'tivicify_subscription',
+  LAST_AD: 'tivicify_last_ad',
+  SPONSORED_INQUIRIES: 'tivicify_sponsored_inquiries',
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -194,4 +197,157 @@ export const storageService = {
       // Ignore quota errors gracefully
     }
   },
+
+  // ================= SUBSCRIPTION & BACHS.IO BILLING =================
+  getSubscription(): UserSubscription {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SUBSCRIPTION);
+      if (!data) return { tier: 'free', isActive: false };
+      const sub = JSON.parse(data) as UserSubscription;
+      
+      // Check expiration if set
+      if (sub.expiresAt && sub.expiresAt < Date.now()) {
+        const expired: UserSubscription = { tier: 'free', isActive: false };
+        this.saveSubscription(expired);
+        return expired;
+      }
+      return sub;
+    } catch {
+      return { tier: 'free', isActive: false };
+    }
+  },
+
+  isPro(): boolean {
+    const sub = this.getSubscription();
+    return sub.isActive && (sub.tier === 'pro' || sub.tier === 'vip');
+  },
+
+  isVip(): boolean {
+    const sub = this.getSubscription();
+    return sub.isActive && sub.tier === 'vip';
+  },
+
+  saveSubscription(sub: Partial<UserSubscription>): UserSubscription {
+    const current = this.getSubscription();
+    const updated: UserSubscription = { ...current, ...sub };
+    localStorage.setItem(STORAGE_KEYS.SUBSCRIPTION, JSON.stringify(updated));
+    return updated;
+  },
+
+  verifyActivationCode(codeRaw: string): { success: boolean; tier?: SubscriptionTier; planName?: string; message: string } {
+    const code = codeRaw.trim().toUpperCase().replace(/[\s-]/g, '');
+    if (!code) {
+      return { success: false, message: 'Please enter a valid activation voucher code.' };
+    }
+
+    const now = Date.now();
+    const oneMonth = 30 * 24 * 60 * 60 * 1000;
+    const oneYear = 365 * 24 * 60 * 60 * 1000;
+
+    // VIP passes
+    if (code.includes('VIP') || code === 'TIVICIFYVIP' || code === 'TIVIVIP2026') {
+      const duration = code.includes('YEAR') ? oneYear : oneMonth;
+      this.saveSubscription({
+        tier: 'vip',
+        isActive: true,
+        expiresAt: now + duration,
+        planName: 'VIP Family & Sports Pass',
+        billingCycle: code.includes('YEAR') ? 'annual' : 'monthly',
+        activationCode: codeRaw.trim()
+      });
+      return {
+        success: true,
+        tier: 'vip',
+        planName: 'VIP Family & Sports Pass',
+        message: 'VIP Family Pass successfully activated! Enjoy 5 screens, 4K streams, and 100% ad-free viewing.'
+      };
+    }
+
+    // Pro passes
+    if (code.includes('PRO') || code === 'TIVICIFYPRO' || code === 'TIVIPRO2026' || code === 'BACHSIOPASS' || code === 'TIVICIFY2026') {
+      const duration = code.includes('YEAR') ? oneYear : oneMonth;
+      this.saveSubscription({
+        tier: 'pro',
+        isActive: true,
+        expiresAt: now + duration,
+        planName: 'Tivicify Pro Multi-View Pass',
+        billingCycle: code.includes('YEAR') ? 'annual' : 'monthly',
+        activationCode: codeRaw.trim()
+      });
+      return {
+        success: true,
+        tier: 'pro',
+        planName: 'Tivicify Pro Multi-View Pass',
+        message: 'Tivicify Pro successfully activated! 4-Screen Multi-View and ad-free playback are now unlocked.'
+      };
+    }
+
+    // Lifetime vendor license
+    if (code.includes('LIFETIME')) {
+      this.saveSubscription({
+        tier: 'vip',
+        isActive: true,
+        expiresAt: now + (10 * oneYear),
+        planName: 'Tivicify Lifetime VIP Pass',
+        billingCycle: 'lifetime',
+        activationCode: codeRaw.trim()
+      });
+      return {
+        success: true,
+        tier: 'vip',
+        planName: 'Tivicify Lifetime VIP Pass',
+        message: 'Lifetime VIP Pass activated! Unlimited access granted across all devices.'
+      };
+    }
+
+    return {
+      success: false,
+      message: 'Invalid or expired activation voucher code. Please check and try again.'
+    };
+  },
+
+  // ================= UNITY ADS FREQUENCY =================
+  getLastAdTimestamp(): number {
+    try {
+      const ts = localStorage.getItem(STORAGE_KEYS.LAST_AD);
+      return ts ? parseInt(ts, 10) : 0;
+    } catch {
+      return 0;
+    }
+  },
+
+  recordAdImpression(): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.LAST_AD, Date.now().toString());
+    } catch {
+      // Ignore
+    }
+  },
+
+  canShowAd(minIntervalMinutes = 5): boolean {
+    if (this.isPro()) return false; // Pro users never see ads
+    const last = this.getLastAdTimestamp();
+    const elapsedMinutes = (Date.now() - last) / (1000 * 60);
+    return elapsedMinutes >= minIntervalMinutes;
+  },
+
+  // ================= SPONSORED INQUIRIES =================
+  saveSponsoredInquiry(inquiry: SponsoredChannelInquiry) {
+    try {
+      const list = this.getSponsoredInquiries();
+      list.unshift(inquiry);
+      localStorage.setItem(STORAGE_KEYS.SPONSORED_INQUIRIES, JSON.stringify(list));
+    } catch {
+      // Ignore
+    }
+  },
+
+  getSponsoredInquiries(): SponsoredChannelInquiry[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SPONSORED_INQUIRIES);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
 };

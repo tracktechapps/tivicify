@@ -10,5 +10,12 @@ data class AppSettings(
     val enableParentalPin: Boolean = false,
     val parentalPin: String = "",
     val soundEffects: Boolean = true,
-    val themeColor: String = "blue"
+    val themeColor: String = "blue",
+    val isPro: Boolean = false,
+    val subscriptionTier: String = "free", // "free", "pro", "vip"
+    val subscriptionExpiresAt: Long = 0L,
+    val bachsApiKey: String = "",
+    val unityGameId: String = "5432101",
+    val unityTestMode: Boolean = true,
+    val unityAdsEnabled: Boolean = true
 )

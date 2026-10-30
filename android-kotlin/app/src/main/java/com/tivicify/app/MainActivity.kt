@@ -21,10 +21,12 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.tivicify.app.ads.UnityAdsManager
 import com.tivicify.app.data.model.AppSettings
 import com.tivicify.app.data.repository.MediaRepository
 import com.tivicify.app.data.repository.RecordingsRepository
 import com.tivicify.app.data.repository.TvRepository
+import com.tivicify.app.ui.components.SubscriptionDialog
 import com.tivicify.app.ui.navigation.Screen
 import com.tivicify.app.ui.screens.*
 import com.tivicify.app.ui.theme.*
@@ -38,6 +40,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize Unity Ads SDK
+        UnityAdsManager.initialize(applicationContext, gameId = "5432101", testMode = true)
+
         setContent {
             TivicifyTheme {
                 val navController = rememberNavController()
@@ -45,6 +50,7 @@ class MainActivity : ComponentActivity() {
                 val currentRoute = navBackStackEntry?.destination?.route
 
                 var appSettings by remember { mutableStateOf(AppSettings()) }
+                var showSubscriptionDialog by remember { mutableStateOf(false) }
 
                 // Hide bottom navigation bar when viewing fullscreen player
                 val isPlayerRoute = currentRoute?.startsWith("player") == true
@@ -148,7 +154,9 @@ class MainActivity : ComponentActivity() {
                                 tvRepository = tvRepository,
                                 onNavigateFullscreen = { channel ->
                                     navController.navigate(Screen.Player.createRoute(channel.id, "channel"))
-                                }
+                                },
+                                isPro = appSettings.isPro,
+                                onOpenSubscription = { showSubscriptionDialog = true }
                             )
                         }
 
@@ -164,7 +172,8 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.Settings.route) {
                             SettingsScreen(
                                 settings = appSettings,
-                                onSettingsChanged = { appSettings = it }
+                                onSettingsChanged = { appSettings = it },
+                                onOpenSubscription = { showSubscriptionDialog = true }
                             )
                         }
 
@@ -184,10 +193,25 @@ class MainActivity : ComponentActivity() {
                                 tvRepository = tvRepository,
                                 mediaRepository = mediaRepository,
                                 recordingsRepository = recordingsRepository,
-                                onBack = { navController.popBackStack() }
+                                onBack = { navController.popBackStack() },
+                                isPro = appSettings.isPro
                             )
                         }
                     }
+                }
+
+                // Bachs.io Pro Subscription Dialog
+                if (showSubscriptionDialog) {
+                    SubscriptionDialog(
+                        onDismiss = { showSubscriptionDialog = false },
+                        onSubscriptionActivated = { tier, expiresAt ->
+                            appSettings = appSettings.copy(
+                                isPro = true,
+                                subscriptionTier = tier,
+                                subscriptionExpiresAt = expiresAt
+                            )
+                        }
+                    )
                 }
             }
         }

@@ -35,6 +35,8 @@ import { storageService } from '../services/storageService';
 import { audioEnhancer } from '../services/audioEnhancer';
 import { SleepTimerModal } from './SleepTimerModal';
 import { ChannelSurferDrawer } from './ChannelSurferDrawer';
+import { unityAdsService } from '../services/unityAdsService';
+import { UnityAdOverlay } from './UnityAdOverlay';
 
 interface VideoPlayerProps {
   media: MediaItem;
@@ -43,6 +45,7 @@ interface VideoPlayerProps {
   onMinimize?: () => void;
   liveChannels?: ChannelItem[];
   onSwitchChannel?: (item: MediaItem) => void;
+  onOpenSubscription?: () => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -52,11 +55,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onMinimize,
   liveChannels = [],
   onSwitchChannel,
+  onOpenSubscription,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
 
+  const [showUnityAd, setShowUnityAd] = useState<boolean>(() => unityAdsService.shouldServeAd());
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -1248,6 +1253,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Unity In-Stream Video Ad Interstitial for Free Users */}
+      {showUnityAd && (
+        <UnityAdOverlay
+          onAdFinished={() => {
+            setShowUnityAd(false);
+            if (videoRef.current) {
+              videoRef.current.play().catch(() => {});
+            }
+          }}
+          onOpenSubscription={() => {
+            setShowUnityAd(false);
+            if (onOpenSubscription) onOpenSubscription();
+          }}
+        />
+      )}
 
       {/* Sleep Timer Preset Modal */}
       <SleepTimerModal

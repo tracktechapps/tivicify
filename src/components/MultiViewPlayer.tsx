@@ -19,18 +19,31 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import { ChannelItem, MediaItem } from '../types';
+import { storageService } from '../services/storageService';
 
 interface MultiViewPlayerProps {
   channels: ChannelItem[];
   onClose: () => void;
   onMaximizeChannel: (media: MediaItem) => void;
+  onOpenSubscription?: () => void;
 }
 
 export const MultiViewPlayer: React.FC<MultiViewPlayerProps> = ({
   channels,
   onClose,
   onMaximizeChannel,
+  onOpenSubscription,
 }) => {
+  const isPro = storageService.isPro();
+  const [trialSeconds, setTrialSeconds] = useState(isPro ? 999999 : 60);
+
+  useEffect(() => {
+    if (isPro) return;
+    const interval = setInterval(() => {
+      setTrialSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPro]);
   // Layouts: 'focus' (1 Big + 3 Mini), 'dual' (2 screens), 'quad' (4 screens)
   const [layout, setLayout] = useState<'focus' | 'dual' | 'quad'>('quad');
   
@@ -374,7 +387,68 @@ export const MultiViewPlayer: React.FC<MultiViewPlayerProps> = ({
       </div>
 
       {/* Video Canvas Container */}
-      <div className="flex-1 p-2 sm:p-3 bg-black min-h-0 overflow-hidden">
+      <div className="flex-1 p-2 sm:p-3 bg-black min-h-0 overflow-hidden relative">
+        
+        {/* Free Trial Banner */}
+        {!isPro && trialSeconds > 0 && (
+          <div className="mb-2 rounded-xl bg-gradient-to-r from-blue-900/80 via-indigo-900/80 to-slate-900 border border-cyan-500/40 px-3.5 py-1.5 flex items-center justify-between text-xs text-white shadow-lg">
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+              <span className="font-bold text-cyan-300">⚡ Multi-View Trial:</span>
+              <span className="font-mono bg-black/40 px-1.5 py-0.5 rounded text-white">{trialSeconds}s remaining</span>
+              <span className="hidden md:inline text-gray-300">• Unlock unlimited 4-Screen Matrix with Bachs.io</span>
+            </div>
+            {onOpenSubscription && (
+              <button
+                onClick={onOpenSubscription}
+                className="px-2.5 py-0.5 rounded bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-[11px] hover:scale-105 transition shadow"
+              >
+                Go Pro (Bachs.io)
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Expired Paywall Overlay */}
+        {!isPro && trialSeconds <= 0 && (
+          <div className="absolute inset-0 z-40 bg-black/92 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-slate-800 p-6 text-center shadow-2xl">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/30">
+                <LayoutGrid className="w-7 h-7 text-white" />
+              </div>
+
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-cyan-300 font-bold text-[10px] uppercase tracking-wider">
+                Bachs.io Pro Feature
+              </span>
+
+              <h3 className="text-xl font-black text-white mt-2">
+                Multi-View 4-Screen Matrix
+              </h3>
+
+              <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                Your 60-second trial has ended. Subscribe through Bachs.io to enjoy unlimited 4-screen streaming at 60 FPS, 100% ad-free (no Unity ads), with instant audio switching.
+              </p>
+
+              <div className="mt-5 space-y-2.5">
+                {onOpenSubscription && (
+                  <button
+                    onClick={onOpenSubscription}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-cyan-500 hover:to-blue-600 text-white font-black text-xs shadow-lg shadow-blue-500/30 hover:scale-105 transition"
+                  >
+                    Subscribe with Bachs.io (₦1,500/mo)
+                  </button>
+                )}
+
+                <button
+                  onClick={onClose}
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-xs font-semibold transition"
+                >
+                  Return to Single Channel TV
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* ================= LAYOUT 1: SPOTLIGHT / FOCUS (1 Big + 3 Mini) ================= */}
         {layout === 'focus' && (

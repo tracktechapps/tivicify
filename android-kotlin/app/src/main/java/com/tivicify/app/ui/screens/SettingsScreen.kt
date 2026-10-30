@@ -25,7 +25,8 @@ import com.tivicify.app.ui.theme.*
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
-    onSettingsChanged: (AppSettings) -> Unit
+    onSettingsChanged: (AppSettings) -> Unit,
+    onOpenSubscription: () -> Unit = {}
 ) {
     var showQrDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
@@ -119,6 +120,65 @@ fun SettingsScreen(
                     contentDescription = null,
                     tint = TextSecondary
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Bachs.io Pro Membership Card
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onOpenSubscription() },
+            shape = RoundedCornerShape(12.dp),
+            color = if (settings.isPro) SurfaceCard else PrimaryBlue.copy(alpha = 0.15f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, if (settings.isPro) SuccessEmerald else AccentCyan)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = AccentCyan.copy(alpha = 0.2f),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = AccentCyan,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (settings.isPro) "Active Pro (Bachs.io)" else "Bachs.io Pro & VIP Pass",
+                        color = TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (settings.isPro) "100% Ad-Free • 4-Screen Matrix Unlocked" else "Upgrade to unlock 4-Screen Multi-View & skip Unity ads",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+
+                Button(
+                    onClick = onOpenSubscription,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(if (settings.isPro) "Manage" else "Upgrade", fontSize = 11.sp, color = Color.White)
+                }
             }
         }
 

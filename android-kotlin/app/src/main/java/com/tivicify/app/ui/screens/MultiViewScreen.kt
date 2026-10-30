@@ -39,7 +39,9 @@ import com.tivicify.app.ui.theme.*
 fun MultiViewScreen(
     tvRepository: TvRepository,
     onNavigateFullscreen: (ChannelItem) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPro: Boolean = false,
+    onOpenSubscription: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val allChannels by tvRepository.channels.collectAsState()
@@ -157,6 +159,47 @@ fun MultiViewScreen(
                             containerColor = SurfaceCard,
                             labelColor = TextSecondary
                         )
+                    )
+                }
+            }
+        }
+
+        // Bachs.io Pro Unlock Banner for Free Users
+        if (!isPro) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenSubscription() },
+                color = PrimaryBlue.copy(alpha = 0.15f),
+                border = BorderStroke(1.dp, AccentCyan.copy(alpha = 0.4f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = AccentCyan,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Multi-View Matrix • Powered by Bachs.io",
+                            color = TextPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = "Unlock Unlimited (from ₦1,500) >",
+                        color = AccentCyan,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

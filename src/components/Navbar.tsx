@@ -13,9 +13,12 @@ import {
   Baby,
   HardDrive,
   QrCode,
-  LayoutGrid
+  LayoutGrid,
+  Crown,
+  Sparkles
 } from 'lucide-react';
 import { NavTab } from '../types';
+import { storageService } from '../services/storageService';
 
 interface NavbarProps {
   currentTab: NavTab;
@@ -26,6 +29,7 @@ interface NavbarProps {
   onOpenSettings: () => void;
   onOpenShortcuts?: () => void;
   onOpenInstallQr?: () => void;
+  onOpenSubscription?: () => void;
   tvMode: boolean;
   onToggleTVMode: () => void;
   kidsMode: boolean;
@@ -42,6 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenShortcuts,
   onOpenInstallQr,
+  onOpenSubscription,
   tvMode,
   onToggleTVMode,
   kidsMode,
@@ -239,6 +244,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                 aria-label="Shortcuts Help"
               >
                 <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400/90" />
+              </button>
+            )}
+
+            {/* Bachs.io Pro Membership Button */}
+            {onOpenSubscription && (
+              <button
+                onClick={onOpenSubscription}
+                className={`tv-focusable flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all hover:scale-105 shadow-md ${
+                  storageService.isPro()
+                    ? 'bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 text-yellow-300 border border-yellow-500/40 shadow-amber-500/10'
+                    : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-blue-500/25'
+                }`}
+                title={storageService.isPro() ? 'Active Pro Member (Bachs.io)' : 'Upgrade to Pro with Bachs.io'}
+              >
+                {storageService.isPro() ? (
+                  <>
+                    <Crown className="w-3.5 h-3.5 text-yellow-400" />
+                    <span>PRO</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                    <span className="hidden sm:inline">Go Pro</span>
+                    <span className="text-[10px] bg-white/20 px-1 py-0.2 rounded font-mono">Bachs</span>
+                  </>
+                )}
               </button>
             )}
 

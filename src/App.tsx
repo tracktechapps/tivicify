@@ -37,6 +37,7 @@ import { SavedRecordingsView } from './components/SavedRecordingsView';
 import { InstallQrModal } from './components/InstallQrModal';
 import { MultiViewPlayer } from './components/MultiViewPlayer';
 import { ParentalPinModal } from './components/ParentalPinModal';
+import { SubscriptionModal } from './components/SubscriptionModal';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
@@ -54,6 +55,7 @@ export function App() {
   const [installQrOpen, setInstallQrOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pinModalMode, setPinModalMode] = useState<'unlock' | 'set'>('unlock');
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   // User state
   const [watchlist, setWatchlist] = useState<MediaItem[]>([]);
@@ -259,6 +261,7 @@ export function App() {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
         onOpenInstallQr={() => setInstallQrOpen(true)}
+        onOpenSubscription={() => setSubscriptionOpen(true)}
         tvMode={settings.tvMode}
         onToggleTVMode={() => handleUpdateSettings({ tvMode: !settings.tvMode })}
         kidsMode={settings.kidsMode}
@@ -454,6 +457,7 @@ export function App() {
               setActiveMedia(m);
               setIsMiniPlayer(false);
             }}
+            onOpenSubscription={() => setSubscriptionOpen(true)}
           />
         )}
 
@@ -657,6 +661,7 @@ export function App() {
           onMinimize={() => setIsMiniPlayer(true)}
           liveChannels={CURATED_CHANNELS}
           onSwitchChannel={(item) => setActiveMedia(item)}
+          onOpenSubscription={() => setSubscriptionOpen(true)}
         />
       )}
 
@@ -724,6 +729,7 @@ export function App() {
         apkPath="./Tivicify.apk"
         onOpenInstallQr={() => setInstallQrOpen(true)}
         onPromptSetPin={handlePromptSetPin}
+        onOpenSubscription={() => setSubscriptionOpen(true)}
       />
 
       {/* TV Remote & Keyboard Shortcuts Modal */}
@@ -746,6 +752,16 @@ export function App() {
         currentPin={settings.parentalPin}
         onSuccess={handlePinSuccess}
         onClose={() => setPinModalOpen(false)}
+      />
+
+      {/* Bachs.io Pro & VIP Subscription Modal */}
+      <SubscriptionModal
+        isOpen={subscriptionOpen}
+        onClose={() => setSubscriptionOpen(false)}
+        onSubscriptionUpdated={() => {
+          // Force re-render to update Pro status indicators
+          setSettings({ ...storageService.getSettings() });
+        }}
       />
     </div>
   );

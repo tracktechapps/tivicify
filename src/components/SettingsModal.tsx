@@ -15,9 +15,14 @@ import {
   Ear,
   Zap,
   QrCode,
-  Lock
+  Lock,
+  Crown,
+  CreditCard,
+  ShieldCheck,
+  Radio
 } from 'lucide-react';
 import { AppSettings } from '../types';
+import { storageService } from '../services/storageService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -28,6 +33,7 @@ interface SettingsModalProps {
   apkPath?: string;
   onOpenInstallQr?: () => void;
   onPromptSetPin?: () => void;
+  onOpenSubscription?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -39,12 +45,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   apkPath,
   onOpenInstallQr,
   onPromptSetPin,
+  onOpenSubscription,
 }) => {
   const [apiKey, setApiKey] = useState(settings.tmdbApiKey || '');
+  const [bachsKey, setBachsKey] = useState(settings.bachsApiKey || '');
+  const [unityGameId, setUnityGameId] = useState(settings.unityGameId || '5432101');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [bachsSaved, setBachsSaved] = useState(false);
+  const [unitySaved, setUnitySaved] = useState(false);
   const [historyCleared, setHistoryCleared] = useState(false);
 
   if (!isOpen) return null;
+
+  const currentSub = storageService.getSubscription();
+
+  const handleSaveBachs = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateSettings({ bachsApiKey: bachsKey.trim() });
+    setBachsSaved(true);
+    setTimeout(() => setBachsSaved(false), 2000);
+  };
+
+  const handleSaveUnity = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateSettings({ unityGameId: unityGameId.trim() });
+    setUnitySaved(true);
+    setTimeout(() => setUnitySaved(false), 2000);
+  };
 
   const handleSaveApiKey = (e: React.FormEvent) => {
     e.preventDefault();
@@ -364,6 +391,99 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
           </form>
+
+          {/* Bachs.io Billing & Pro Membership Card */}
+          <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Crown className="w-5 h-5 text-yellow-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Bachs.io Billing & Membership</h3>
+                  <p className="text-[11px] text-gray-400">Status: {currentSub.isActive ? (currentSub.planName || 'Active Pro') : 'Free Plan (Ad-Supported)'}</p>
+                </div>
+              </div>
+              {onOpenSubscription && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenSubscription();
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-cyan-500 hover:to-blue-600 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition hover:scale-105"
+                >
+                  {currentSub.isActive ? 'Manage Plan' : 'Upgrade with Bachs.io'}
+                </button>
+              )}
+            </div>
+
+            {/* Bachs Merchant API Key (Optional) */}
+            <form onSubmit={handleSaveBachs} className="pt-2 border-t border-slate-700/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-gray-300">Bachs.io Secret API Key (For Store Owner)</span>
+                <span className="text-[10px] text-cyan-400 font-mono">sk_live_... / sk_sandbox_...</span>
+              </div>
+              <div className="flex space-x-2">
+                <input
+                  type="password"
+                  placeholder="Paste your Bachs.io API Key"
+                  value={bachsKey}
+                  onChange={(e) => setBachsKey(e.target.value)}
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-cyan-400"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition"
+                >
+                  {bachsSaved ? 'Saved!' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Unity Ads Monetization Configuration */}
+          <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Radio className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Unity Video Ads</h3>
+                  <p className="text-[11px] text-gray-400">
+                    {settings.unityAdsEnabled !== false ? 'Active: Serving video interstitials to free viewers' : 'Disabled'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => onUpdateSettings({ unityAdsEnabled: settings.unityAdsEnabled === false })}
+                className={`tv-focusable relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  settings.unityAdsEnabled !== false ? 'bg-emerald-600' : 'bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings.unityAdsEnabled !== false ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUnity} className="pt-2 border-t border-slate-700/60 flex items-center space-x-2">
+              <div className="flex-1">
+                <label className="block text-[10px] text-gray-400 mb-0.5">Unity Game ID (Android / Web)</label>
+                <input
+                  type="text"
+                  value={unityGameId}
+                  onChange={(e) => setUnityGameId(e.target.value)}
+                  placeholder="e.g. 5432101"
+                  className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+              <button
+                type="submit"
+                className="mt-4 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition"
+              >
+                {unitySaved ? 'Saved!' : 'Save Game ID'}
+              </button>
+            </form>
+          </div>
 
           {/* Clear Watch History */}
           <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/60 border border-slate-700">

@@ -31,6 +31,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.tivicify.app.ads.UnityAdsManager
 import com.tivicify.app.data.model.ChannelItem
 import com.tivicify.app.data.model.MediaItem
 import com.tivicify.app.data.repository.MediaRepository
@@ -48,7 +49,8 @@ fun PlayerScreen(
     tvRepository: TvRepository,
     mediaRepository: MediaRepository,
     recordingsRepository: RecordingsRepository,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    isPro: Boolean = false
 ) {
     val context = LocalContext.current
     val tivicifyPlayer = remember { TivicifyPlayer(context) }
@@ -67,6 +69,11 @@ fun PlayerScreen(
 
     // Resolve channel or media item
     LaunchedEffect(itemId, itemType) {
+        // Trigger Unity Ads for free users
+        (context as? Activity)?.let { act ->
+            UnityAdsManager.showAdIfAllowed(activity = act, isPro = isPro) {}
+        }
+
         if (itemType == "channel") {
             val ch = tvRepository.getChannelById(itemId)
             channel = ch

@@ -91,6 +91,42 @@ export interface AppSettings {
   themeColor: 'blue' | 'red' | 'purple' | 'amber' | 'emerald';
   soundEffects: boolean;
   lowBandwidthMode: boolean; // Data saver for weak/congested internet
+  bachsApiKey?: string;
+  bachsEnvironment?: 'sandbox' | 'live';
+  unityGameId?: string;
+  unityTestMode?: boolean;
+  unityAdsEnabled?: boolean;
+}
+
+export type SubscriptionTier = 'free' | 'pro' | 'vip';
+
+export interface UserSubscription {
+  tier: SubscriptionTier;
+  isActive: boolean;
+  expiresAt?: number;
+  planName?: string;
+  billingCycle?: 'monthly' | 'annual' | 'lifetime';
+  activationCode?: string;
+  bachsSessionId?: string;
+  bachsPaymentId?: string;
+}
+
+export interface UnityAdConfig {
+  gameId: string;
+  adUnitId: string;
+  testMode: boolean;
+  enabled: boolean;
+  minIntervalMinutes: number;
+}
+
+export interface SponsoredChannelInquiry {
+  channelName: string;
+  streamUrl: string;
+  category: string;
+  contactEmail: string;
+  contactPhone: string;
+  tier: 'starter' | 'growth' | 'prime';
+  submittedAt: number;
 }
 
 export interface StreamStats {
